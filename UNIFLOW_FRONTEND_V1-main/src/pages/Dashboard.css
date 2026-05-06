@@ -1,0 +1,29 @@
+.dashboard-loading {
+  --background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-container p {
+  margin-top: 1rem;
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .dashboard-loading {
+    --background: #1a1a1a;
+  }
+  
+  .loading-container p {
+    color: #adb5bd;
+  }
+}

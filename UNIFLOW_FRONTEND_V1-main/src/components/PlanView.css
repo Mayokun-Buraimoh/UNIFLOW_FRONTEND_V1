@@ -1,0 +1,437 @@
+/* Plan View Screen - Universal for all plan types */
+.plan-view-screen {
+  background: #447055;
+  font-family: 'Roboto', sans-serif;
+  min-height: 100vh;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Override Ionic default spacing */
+ion-content {
+  --padding-top: 0px !important;
+  --padding-bottom: 0px !important;
+  --padding-start: 0px !important;
+  --padding-end: 0px !important;
+  overflow: hidden !important;
+}
+
+ion-page {
+  --padding-top: 0px !important;
+  --padding-bottom: 0px !important;
+  --padding-start: 0px !important;
+  --padding-end: 0px !important;
+}
+
+/* Status Bar Spacer */
+.plan-view-screen .status-bar-spacer,
+.plan-view-screen div.status-bar-spacer {
+  height: 60px !important;
+  width: 100% !important;
+  background: #447055 !important;
+}
+
+/* Fixed Bottom Spacer - positioned at same level as navbar */
+.fixed-bottom-spacer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  width: 100%;
+  background: #447055;
+  z-index: 10;
+}
+
+/* Blank Content Area */
+.blank-content {
+  flex: 1;
+  width: 100%;
+  background: #447055;
+  min-height: calc(100vh - 200px);
+  padding-bottom: 80px;
+  /* Add padding to account for fixed bottom spacer */
+}
+
+.plan-view-screen .plan-header .back-button {
+  background: none !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  color: white !important;
+  position: absolute !important;
+  left: 24px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+.plan-view-screen .plan-header .back-button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-50%) translateY(-2px) !important;
+}
+
+/* Plan Header */
+.plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px;
+  position: relative;
+  background: #447055;
+  min-height: 60px;
+  margin-bottom: 20px;
+  /* Gap between plan header and content */
+}
+
+
+
+
+.plan-title {
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  text-align: center;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+/* Plan Mini Banner */
+.plan-mini-banner {
+  position: relative;
+  height: 120px;
+  overflow: hidden;
+}
+
+.plan-mini-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
+
+/* Segment Container */
+.segment-container {
+  padding: 20px 24px 0px 24px;
+}
+
+.plan-segment {
+  display: flex;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.plan-view-screen .segment-button {
+  flex: 1 !important;
+  background: none !important;
+  border: none !important;
+  padding: 12px 16px !important;
+  color: #2c5f2c !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.plan-view-screen ion-segment-button {
+  --color: #2c5f2c !important;
+  --color-checked: white !important;
+  --background: transparent !important;
+  --background-checked: rgba(237, 63, 28) !important;
+  --indicator-color: rgba(237, 63, 28) !important;
+  --border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-family: 'Roboto', sans-serif !important;
+}
+
+.plan-view-screen ion-segment-button[aria-pressed="true"] {
+  box-shadow: 0 4px 12px rgba(237, 63, 28, 0.4) !important;
+}
+
+.plan-view-screen .segment-button.active {
+  background: #ED3F1C !important;
+  color: white !important;
+}
+
+.plan-view-screen .segment-button:hover {
+  background: rgba(237, 63, 28, 0.1) !important;
+  color: #ED3F1C !important;
+}
+
+/* Plan Content */
+
+/* Progress Component Styles - Added to ensure they load */
+.plan-view-screen .progress-container {
+  padding: 0;
+  padding-top: 0px;
+  font-family: 'Roboto', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-description {
+  color: white;
+  font-size: 14px;
+  margin: 0 0 24px 0;
+  line-height: 1.4;
+  font-weight: 300;
+  font-family: 'Roboto', sans-serif;
+}
+
+.weekly-progress {
+  margin-bottom: 32px;
+  width: 100%;
+}
+
+.progress-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  height: 240px;
+  width: 100%;
+}
+
+.progress-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.plan-view-screen .progress-container .weekly-progress-bar {
+  width: 12px !important;
+  height: 200px !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-radius: 6px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  flex: none !important;
+}
+
+.plan-view-screen .progress-container .weekly-progress-fill {
+  width: 100% !important;
+  height: auto !important;
+  background: #4CAF50 !important;
+  border-radius: 6px !important;
+  transition: height 0.3s ease !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden !important;
+}
+
+
+.day-label {
+  color: white;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+  font-family: 'Roboto', sans-serif;
+}
+
+.productivity-report {
+  padding: 24px;
+  color: white;
+}
+
+.report-title {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  color: white;
+  font-family: 'Roboto', sans-serif;
+}
+
+.report-week {
+  font-size: 14px;
+  color: #90ee90;
+  margin: 0 0 4px 0;
+  font-weight: 300;
+  font-family: 'Roboto', sans-serif;
+}
+
+.report-user {
+  font-size: 14px;
+  color: #90ee90;
+  margin: 0 0 16px 0;
+  font-weight: 300;
+  font-family: 'Roboto', sans-serif;
+}
+
+.report-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 16px 0;
+}
+
+.report-quote {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  font-style: italic;
+  color: white;
+  font-weight: 400;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Animation keyframes */
+@keyframes colorChange {
+  0% {
+    background: #ff0000 !important;
+  }
+
+  25% {
+    background: #00ff00 !important;
+  }
+
+  50% {
+    background: #ff6600 !important;
+  }
+
+  75% {
+    background: #ffff00 !important;
+  }
+
+  100% {
+    background: #ff0000 !important;
+  }
+}
+
+@keyframes moveUpDown {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  25% {
+    transform: translateY(-15px);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translateY(-20px);
+    opacity: 1;
+  }
+
+  75% {
+    transform: translateY(-15px);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes moveLeftRight {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  25% {
+    transform: translateX(10px);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translateX(15px);
+    opacity: 1;
+  }
+
+  75% {
+    transform: translateX(10px);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.plan-content {
+  padding: 0px 24px 20px 24px;
+  flex: 1;
+}
+
+/* Content Containers */
+.targets-container,
+.tasks-container,
+.progress-container {
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .plan-header {
+    padding: 16px 20px;
+  }
+
+  .plan-title {
+    font-size: 20px;
+  }
+
+  .segment-container {
+    padding: 16px 20px;
+  }
+
+  .plan-content {
+    padding: 16px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .plan-header {
+    padding: 12px 16px;
+  }
+
+  .plan-title {
+    font-size: 18px;
+  }
+
+  .segment-container {
+    padding: 12px 16px;
+  }
+
+  .plan-content {
+    padding: 12px 16px;
+  }
+
+  .targets-container,
+  .tasks-container,
+  .progress-container {
+    padding: 16px;
+  }
+}

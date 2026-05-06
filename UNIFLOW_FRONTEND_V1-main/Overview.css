@@ -1,0 +1,570 @@
+/* ── Overview Page ──────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.ov-screen {
+  --background: #ffffff !important;
+  background: #ffffff !important;
+  font-family: 'Inter', 'Roboto', sans-serif;
+}
+
+
+
+/* Status bar */
+.ov-status-bar {
+  height: 52px;
+  background: transparent;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+
+.ov-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 20px 16px 20px;
+  min-height: 48px;
+}
+
+.ov-header .stable-back-button,
+.ov-header .stable-back-icon {
+  color: #2f6d4f !important;
+}
+
+.ov-back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(68, 112, 85, 0.1);
+  color: #447055;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.ov-back-btn:active { background: rgba(68, 112, 85, 0.2); }
+
+.ov-title {
+  flex: 1;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1c2e22;
+  margin: 0;
+  letter-spacing: -0.3px;
+  text-align: center;
+  pointer-events: none;
+  padding: 0 48px;
+}
+
+.ov-date-nav {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(68, 112, 85, 0.08);
+  border-radius: 20px;
+  padding: 4px 6px;
+  z-index: 2;
+}
+
+.ov-nav-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #447055;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.ov-nav-btn:active { background: rgba(68,112,85,0.15); }
+
+.ov-today-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #447055;
+  cursor: pointer;
+  padding: 0 4px;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+/* ── Progress Banner ────────────────────────────────────────────────────────── */
+
+.ov-banner {
+  margin: 0 16px 20px 16px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-radius: 24px;
+  padding: 24px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow:
+    0 12px 40px rgba(68, 112, 85, 0.18),
+    0 4px 12px rgba(68, 112, 85, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  border: 1px solid rgba(68, 112, 85, 0.1);
+  min-height: 130px;
+}
+
+.ov-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ov-banner-count {
+  font-size: 18.5px;
+  font-weight: 700;
+  color: #1c2e22;
+  margin: 0 0 6px 0;
+  line-height: 1.3;
+}
+
+.ov-banner-sub {
+  font-size: 13px;
+  color: #7a9882;
+  margin: 0 0 11px 0;
+  line-height: 1.45;
+}
+
+.ov-banner-fraction {
+  display: inline-block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #4a7c59;
+  background: rgba(68, 112, 85, 0.09);
+  border-radius: 8px;
+  padding: 4px 11px;
+}
+
+/* Ring */
+.ov-ring-wrap {
+  position: relative;
+  width: 102px;
+  height: 102px;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.ov-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.ov-ring circle:first-child {
+  opacity: 0.18;
+}
+
+.ov-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.ov-ring-day {
+  font-size: 12px;
+  font-weight: 500;
+  color: #7a9882;
+  letter-spacing: 0.2px;
+}
+
+.ov-ring-pct {
+  font-size: 22px;
+  font-weight: 800;
+  color: #2d6645;
+  line-height: 1.1;
+  margin-top: -1px;
+}
+
+/* ── Body ────────────────────────────────────────────────────────────────────── */
+
+.ov-body {
+  padding: 0 16px;
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────────────── */
+
+.ov-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 32px;
+  text-align: center;
+  animation: ov-fadein 0.5s ease;
+}
+
+.ov-empty-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(68, 112, 85, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: #7aab8a;
+}
+
+.ov-empty-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.ov-empty-sub {
+  font-size: 13px;
+  color: #99aaa0;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Sections ────────────────────────────────────────────────────────────────── */
+
+.ov-section {
+  margin-bottom: 24px;
+  animation: ov-fadein 0.4s ease;
+}
+
+.ov-section-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1c2e22;
+  margin-bottom: 12px;
+  letter-spacing: 0.1px;
+}
+
+.ov-section-label svg {
+  color: #447055;
+}
+
+.ov-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Activity Card ───────────────────────────────────────────────────────────── */
+
+.ov-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-radius: 20px;
+  padding: 18px 18px 16px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  box-shadow:
+    0 12px 40px rgba(68, 112, 85, 0.18),
+    0 4px 12px rgba(68, 112, 85, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  border: 1px solid rgba(68, 112, 85, 0.1);
+  transition: box-shadow 0.25s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle green-tinted shimmer strip at top */
+.ov-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    rgba(76, 175, 80, 0.0) 0%,
+    rgba(76, 175, 80, 0.45) 50%,
+    rgba(76, 175, 80, 0.0) 100%);
+  border-radius: 20px 20px 0 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.ov-card:hover::before {
+  opacity: 1;
+}
+
+.ov-card:hover {
+  box-shadow:
+    0 16px 48px rgba(68, 112, 85, 0.25),
+    0 4px 16px rgba(68, 112, 85, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transform: translateY(-2px);
+}
+
+.ov-card:active {
+  transform: scale(0.983);
+}
+
+.ov-card--done {
+  background: rgba(246, 252, 248, 0.85);
+  border: 1px solid rgba(68, 112, 85, 0.06);
+  opacity: 0.9;
+}
+
+/* Checkbox */
+.ov-checkbox {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2.5px solid #a8d4b5;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  margin-top: 1px;
+}
+.ov-checkbox:active { transform: scale(0.88); }
+
+.ov-checkbox--checked {
+  background: linear-gradient(135deg, #4CAF50, #66BB6A);
+  border-color: transparent;
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.35);
+}
+
+/* Card content */
+.ov-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ov-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.ov-card-type-icon {
+  color: #7aab8a;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ov-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1c2e22;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  transition: color 0.2s;
+}
+
+.ov-card-title--done {
+  color: #99aaa0;
+  text-decoration: line-through;
+  text-decoration-color: #c5d8ca;
+}
+
+/* Meta row */
+.ov-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.ov-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #8ea898;
+}
+
+.ov-card-bullet {
+  font-size: 10px;
+  color: #c5d8ca;
+}
+
+.ov-card-duration {
+  font-size: 11px;
+  color: #8ea898;
+}
+
+/* Progress bar strip */
+.ov-card-bar {
+  height: 8px;
+  border-radius: 6px;
+  background: rgba(68, 112, 85, 0.10);
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.ov-card-bar-fill {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(168, 212, 181, 0.8), rgba(129, 199, 132, 0.9));
+  border-radius: 6px;
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+}
+
+.ov-card-bar-fill--done {
+  width: 100%;
+  background: linear-gradient(90deg, #4CAF50, #81C784, #A5D6A7);
+}
+
+/* Bottom spacer */
+.ov-bottom-space {
+  height: 90px;
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────────── */
+
+@keyframes ov-fadein {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsiveness (iPad / Tablet / Desktop) ────────────────────────────────── */
+
+@media (min-width: 768px) {
+  /* Let everything stretch but add a bit more horizontal padding on large screens */
+  .ov-header {
+    padding: 24px 32px 20px 32px;
+  }
+  
+  .ov-banner {
+    margin: 0 24px 28px 24px;
+    padding: 32px 30px;
+  }
+  
+  .ov-body {
+    padding: 0 24px;
+  }
+
+  /* Increase Text Sizes */
+  .ov-title {
+    font-size: 28px;
+  }
+
+  .ov-today-btn {
+    font-size: 15px;
+    padding: 4px 10px;
+  }
+
+  .ov-banner-count {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .ov-banner-sub {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+
+  .ov-banner-fraction {
+    font-size: 16px;
+    padding: 6px 16px;
+  }
+
+  .ov-ring-wrap {
+    width: 140px;
+    height: 140px;
+  }
+
+  .ov-ring-pct {
+    font-size: 28px;
+  }
+
+  .ov-ring-day {
+    font-size: 14px;
+  }
+
+  .ov-section-label {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .ov-card {
+    padding: 24px 24px 22px 20px;
+    border-radius: 24px;
+  }
+
+  .ov-checkbox {
+    width: 38px;
+    height: 38px;
+  }
+
+  .ov-card-title {
+    font-size: 18px;
+  }
+
+  .ov-card-meta-item, .ov-card-duration {
+    font-size: 14px;
+  }
+
+  .ov-card-bar {
+    height: 10px;
+    margin-top: 6px;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Desktop / iPad Pro: text and padding increase further */
+  .ov-header {
+    padding: 32px 48px 24px 48px;
+  }
+  
+  .ov-banner {
+    margin: 0 40px 32px 40px;
+    padding: 40px 48px;
+  }
+  
+  .ov-body {
+    padding: 0 40px;
+  }
+
+  .ov-banner-count {
+    font-size: 28px;
+  }
+
+  .ov-banner-sub {
+    font-size: 18px;
+  }
+
+  .ov-ring-wrap {
+    width: 160px;
+    height: 160px;
+  }
+
+  .ov-ring-pct {
+    font-size: 32px;
+  }
+}

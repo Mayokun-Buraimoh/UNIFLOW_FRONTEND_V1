@@ -1,0 +1,453 @@
+/* Courses Screen Styles for Added Functionality */
+.courses-page-new {
+  --background: #ffffff !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --color: #333333;
+}
+
+.courses-minimal-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  position: relative;
+  padding-top: 50px;
+  /* Safe area inset approximations */
+}
+
+/* Header */
+.courses-header-new {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* Align right side default */
+  position: relative;
+  height: 60px;
+  padding: 0 24px;
+  z-index: 101;
+  /* Keep above overlay */
+}
+
+.title-text {
+  color: #4C6F59;
+  font-size: 28px;
+  font-weight: 500;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.header-actions-new {
+  position: absolute;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  z-index: 102;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.search-btn-new svg {
+  width: 20px;
+  height: 20px;
+}
+
+.add-btn-container {
+  position: relative;
+}
+
+.add-circle {
+  width: 24px;
+  height: 24px;
+  background-color: #2ECC71;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px rgba(46, 204, 113, 0.4);
+}
+
+.add-circle svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Base Body Area */
+.courses-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Popover overlay background */
+.popover-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  /* Dark translucent overlay */
+  z-index: 90;
+}
+
+/* Popover Element */
+.add-popover {
+  position: absolute;
+  top: 40px;
+  right: -5px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 16px 20px;
+  z-index: 105;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+/* Outer Green Glow for Popover */
+.add-popover::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 18px;
+  width: 30px;
+  height: 15px;
+  background: #2ECC71;
+  filter: blur(15px);
+  opacity: 0.8;
+  z-index: -1;
+}
+
+.add-popover-item {
+  color: white;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Empty Center Text Mode */
+.courses-center-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  z-index: 1;
+}
+
+.courses-center-text p {
+  color: #333333;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  font-weight: 400;
+  margin: 0;
+}
+
+/* Rendered Cards List Mode */
+.courses-list {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+/* Course Card Themes */
+.course-card-v2 {
+  border-radius: 28px;
+  padding: 16px 18px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 2px solid #00b66a;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  position: relative;
+  min-height: 158px;
+  box-sizing: border-box;
+}
+
+.course-card-v2.active-delete {
+  z-index: 100;
+  /* Ensure it stays above the popover-overlay */
+}
+
+.theme-blue,
+.theme-green,
+.theme-red,
+.theme-purple {
+  background: #ffffff;
+}
+
+.course-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+
+.course-card-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.course-name,
+.course-name-input {
+  color: #3f6f58;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.1;
+}
+
+.course-name-input {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 4px 8px;
+  width: 100%;
+  outline: none;
+  text-transform: uppercase;
+}
+
+.course-notes {
+  color: #3f6f58;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 1;
+}
+
+.course-card-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.course-file-icon {
+  width: 114px;
+  height: 90px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  transform: translate(6px, 4px);
+}
+
+.course-footer {
+  text-align: center;
+  color: #5b8a73;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  padding: 8px 0 2px;
+}
+
+/* Custom UI Alert for Courses Page to match Mockup */
+ion-alert.custom-ui-alert {
+  --background: transparent;
+  --backdrop-opacity: 0.5;
+}
+
+ion-alert.custom-ui-alert .alert-wrapper {
+  background: rgba(255, 255, 255, 0.25) !important;
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+  width: 236px !important;
+  height: 234px !important;
+  max-width: 90% !important;
+  padding: 32px 24px 24px 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+ion-alert.custom-ui-alert .alert-head {
+  display: none !important;
+}
+
+ion-alert.custom-ui-alert .alert-message {
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  line-height: 1.4 !important;
+  padding: 0 0 16px 0 !important;
+  margin: 0 !important;
+  white-space: pre-line !important;
+}
+
+ion-alert.custom-ui-alert .alert-input-group {
+  padding: 0 !important;
+}
+
+ion-alert.custom-ui-alert input.alert-input {
+  background-color: #d1d1d1 !important;
+  border-radius: 15px !important;
+  color: #333333 !important;
+  padding: 16px 24px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 170px !important;
+  margin: 0 auto !important;
+  display: block !important;
+  outline: none !important;
+  text-align: left !important;
+  text-transform: uppercase !important;
+}
+
+ion-alert.custom-ui-alert input.alert-input::placeholder {
+  color: #888888 !important;
+  opacity: 1;
+}
+
+ion-alert.custom-ui-alert input.alert-input:focus {
+  border-bottom-color: transparent !important;
+}
+
+/* Style buttons subtly to match minimalistic aesthetic */
+ion-alert.custom-ui-alert .alert-button-group {
+  margin-top: auto !important;
+  border-top: none !important;
+  justify-content: space-between !important;
+  gap: 12px;
+  padding: 0 4px !important;
+  display: flex !important;
+  width: 100% !important;
+}
+
+ion-alert.custom-ui-alert .alert-button {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-radius: 12px;
+  margin: 0 !important;
+  flex: 1 !important;
+  height: 48px !important;
+  text-transform: none !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Override default Ionic behavior that pushes button text to the end */
+ion-alert.custom-ui-alert .alert-button-inner.sc-ion-alert-md,
+ion-alert.custom-ui-alert .alert-button-inner.sc-ion-alert-ios {
+  justify-content: center !important;
+}
+
+ion-alert.custom-ui-alert .alert-button.alert-btn-create {
+  background: #2ECC71 !important;
+  color: white !important;
+}
+
+/* Inline Options Popup - styled as a vertical tray */
+.inline-options-popup {
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%) translateX(100%);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 18px;
+  padding: 8px 0;
+  /* Vertical padding */
+  z-index: 105;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  /* Vertical layout */
+  min-width: 140px;
+  white-space: nowrap;
+  animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.popup-btn {
+  padding: 12px 24px;
+  margin-left: 7px;
+  margin-right: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.popup-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.rename-btn {
+  color: #ffffff;
+  /* White text color */
+}
+
+.delete-btn {
+  color: #ffffff;
+  background: rgba(247, 32, 32, 0.85);
+  /* Restored red background */
+  border-radius: 17px;
+  margin: 0 12px 8px 12px;
+  /* Adding some padding/margin for the background */
+  padding: 10px 24px;
+}
+
+.popup-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 12px;
+}
+
+/* Red glow for delete popup to signal destructive action */
+.inline-options-popup::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 40px;
+  height: 20px;
+  background: #FF5252;
+  filter: blur(30px);
+  /* Increased blur for softness */
+  opacity: 0.15;
+  /* Reduced opacity from 0.3 */
+  z-index: -1;
+  transform: translateY(-50%);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(80%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(100%);
+  }
+}

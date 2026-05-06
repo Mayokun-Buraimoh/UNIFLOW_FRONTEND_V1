@@ -1,0 +1,327 @@
+/* ─── Premium GlassyTimePicker ────────────────────────────────────────────── */
+
+.gtp-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.gtp-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    0 8px 32px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  color: #1a4331;
+  font-size: 16px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  text-align: left;
+}
+
+.gtp-trigger:hover,
+.gtp-trigger--open {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.6),
+    0 12px 40px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.gtp-clock-icon {
+  flex-shrink: 0;
+  color: #2E7D32;
+  filter: drop-shadow(0 2px 4px rgba(46, 125, 50, 0.3));
+}
+
+.gtp-trigger-value {
+  flex: 1;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.gtp-trigger-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #1a4331;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+}
+
+.gtp-trigger-input::placeholder {
+  color: rgba(26, 67, 49, 0.5);
+  font-weight: 500;
+}
+
+.gtp-chevron {
+  flex-shrink: 0;
+  color: #2E7D32;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.gtp-chevron--up {
+  transform: rotate(180deg);
+}
+
+/* Modal-level Premium Popup */
+.gtp-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(84vw, 312px);
+  min-width: 280px;
+  max-width: 312px;
+  z-index: 12000;
+  animation: gtpSlideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+}
+
+@keyframes gtpSlideUpFade {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.95); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.gtp-popup-inner {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 24px 64px rgba(0, 0, 0, 0.15),
+    0 12px 24px rgba(28, 73, 50, 0.12);
+  padding: 20px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  max-height: min(82vh, 520px);
+  overflow-y: auto;
+}
+
+.gtp-popup-label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(26, 67, 49, 0.7);
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Glassy Wheel Layout */
+.gtp-wheels-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 156px;
+  width: 100%;
+  position: relative;
+  /* Mask image for fade effect at top and bottom */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+}
+
+/* Highlight pill spanning behind the center of the wheels */
+.gtp-wheel-highlight {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  height: 52px;
+  background: linear-gradient(90deg, rgba(46, 125, 50, 0), rgba(46, 125, 50, 0.1) 20%, rgba(46, 125, 50, 0.1) 80%, rgba(46, 125, 50, 0));
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  pointer-events: none;
+  border-radius: 12px;
+  z-index: 0;
+}
+
+.gtp-wheel {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  z-index: 1;
+  scroll-behavior: smooth;
+}
+.gtp-wheel::-webkit-scrollbar { display: none; }
+
+.gtp-wheel-spacer {
+  height: 52px;
+}
+
+.gtp-wheel-item {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-size: 24px;
+  font-weight: 500;
+  color: rgba(26, 67, 49, 0.4);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.gtp-wheel-item--active {
+  font-size: 30px;
+  font-weight: 800;
+  color: #1a4331;
+  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.8);
+  transform: scale(1.05);
+}
+
+.gtp-colon {
+  font-size: 32px;
+  font-weight: 800;
+  color: #2E7D32;
+  opacity: 0.8;
+  z-index: 1;
+  margin: 0 -4px;
+}
+
+/* Elegant Segmented Control for AM/PM */
+.gtp-period-segmented {
+  display: flex;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  padding: 4px;
+  width: 100%;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.gtp-period-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: rgba(26, 67, 49, 0.6);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.gtp-period-btn--active {
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.gtp-period-slider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: calc(50% - 4px);
+  background: linear-gradient(135deg, #2E7D32, #1B5E20);
+  border-radius: 8px;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  z-index: 0;
+}
+
+.gtp-period-slider.pm {
+  transform: translateX(100%);
+}
+
+/* Sleek Confirm Button */
+.gtp-confirm-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: linear-gradient(135deg, rgba(232, 245, 233, 0.8), rgba(200, 230, 201, 0.6));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #1B5E20;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 16px rgba(46, 125, 50, 0.15);
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 480px), (max-height: 760px) {
+  .gtp-popup {
+    width: min(86vw, 296px);
+    max-width: 296px;
+    min-width: 256px;
+  }
+
+  .gtp-popup-inner {
+    padding: 16px 14px 14px;
+    border-radius: 20px;
+    gap: 10px;
+    max-height: min(78vh, 460px);
+  }
+
+  .gtp-wheels-container {
+    height: 136px;
+    gap: 8px;
+  }
+
+  .gtp-wheel-spacer {
+    height: 52px;
+  }
+
+  .gtp-wheel-item {
+    height: 52px;
+    font-size: 22px;
+  }
+
+  .gtp-wheel-item--active {
+    font-size: 28px;
+  }
+
+  .gtp-wheel-highlight {
+    height: 52px;
+  }
+}
+
+.gtp-confirm-btn:hover {
+  background: linear-gradient(135deg, rgba(200, 230, 201, 0.9), rgba(165, 214, 167, 0.7));
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 12px 24px rgba(46, 125, 50, 0.2);
+}
+
+.gtp-confirm-btn:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 4px 8px rgba(46, 125, 50, 0.1);
+}

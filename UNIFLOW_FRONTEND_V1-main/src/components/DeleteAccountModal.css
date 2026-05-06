@@ -1,0 +1,138 @@
+.delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.delete-modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 340px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: modalPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalPopIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.delete-modal-icon {
+  margin-bottom: 20px;
+  background: #FFF5F5;
+  padding: 15px;
+  border-radius: 50%;
+}
+
+.delete-modal-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+}
+
+.delete-modal-warning {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.delete-confirmation-box {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.delete-instruction {
+  font-size: 13px;
+  color: #444;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.delete-input {
+  width: 100%;
+  padding: 14px;
+  border: 1.5px solid #eee;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #FF5252;
+  text-align: center;
+  background: #fafafa;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.delete-input:focus {
+  border-color: #FF5252;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(255, 82, 82, 0.1);
+}
+
+.delete-input.error {
+  border-color: #FF5252;
+  animation: shake 0.4s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.delete-error-msg {
+  color: #FF5252;
+  font-size: 12px;
+  margin-top: 6px;
+  text-align: left;
+}
+
+.delete-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.delete-confirm-btn {
+  background: #FF5252;
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.delete-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-cancel-btn {
+  background: transparent;
+  color: #888;
+  border: none;
+  padding: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}

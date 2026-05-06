@@ -1,0 +1,214 @@
+.fsc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(ellipse 120% 80% at 50% 20%, rgba(46, 204, 113, 0.35), transparent 55%),
+    rgba(15, 22, 18, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.fsc-overlay.fsc-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fsc-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fsc-confetti::before,
+.fsc-confetti::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 14px;
+  left: 10%;
+  top: -20px;
+  background: #ff6b6b;
+  border-radius: 2px;
+  animation: fsc-fall 2.8s linear infinite;
+  box-shadow:
+    20vw 0 #4ecdc4,
+    35vw -40px #ffe66d,
+    50vw -10px #a29bfe,
+    65vw -60px #2ecc71,
+    80vw -30px #ff9ff3,
+    92vw -50px #54a0ff;
+}
+
+.fsc-confetti::after {
+  left: 55%;
+  animation-delay: -1.2s;
+  background: #ffe66d;
+  box-shadow:
+    15vw 0 #2ecc71,
+    40vw -30px #ff6b6b,
+    70vw -45px #4ecdc4;
+}
+
+@keyframes fsc-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.85;
+  }
+}
+
+.fsc-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fsc-star {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: fsc-twinkle 1.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.12s);
+  left: calc(var(--i, 0) * 8.5% + 3%);
+  top: calc(8% + (var(--i, 0) % 4) * 12%);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+}
+
+@keyframes fsc-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.fsc-card {
+  position: relative;
+  max-width: 380px;
+  width: 100%;
+  padding: 32px 28px 28px;
+  border-radius: 28px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 252, 244, 0.96) 100%);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  text-align: center;
+  animation: fsc-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes fsc-pop {
+  0% {
+    transform: scale(0.88) translateY(16px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.fsc-badge {
+  font-size: 52px;
+  line-height: 1;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 8px 16px rgba(46, 204, 113, 0.35));
+  animation: fsc-bounce 1s ease-in-out infinite;
+}
+
+@keyframes fsc-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.fsc-title {
+  margin: 0 0 10px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f1f17;
+  letter-spacing: -0.02em;
+}
+
+.fsc-sub {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: rgba(15, 31, 23, 0.68);
+}
+
+.fsc-xp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.fsc-xp-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(46, 204, 113, 0.18);
+  color: #1e6b45;
+}
+
+.fsc-xp-pill.fsc-xp-streak {
+  background: rgba(255, 193, 7, 0.22);
+  color: #8a5a00;
+}
+
+.fsc-cta {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  box-shadow: 0 8px 24px rgba(46, 204, 113, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fsc-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(46, 204, 113, 0.5);
+}
+
+.fsc-cta:active {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fsc-confetti::before,
+  .fsc-confetti::after,
+  .fsc-star,
+  .fsc-badge,
+  .fsc-card {
+    animation: none !important;
+  }
+}

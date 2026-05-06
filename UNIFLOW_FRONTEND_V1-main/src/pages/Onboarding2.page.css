@@ -1,0 +1,6 @@
+/* IonPage visibility fix (second onboarding step only) */
+.onboarding-page {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+}

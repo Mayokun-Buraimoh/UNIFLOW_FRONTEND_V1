@@ -1,0 +1,277 @@
+/* School Connection Screen */
+.school-connection-screen {
+  --background: #ffffff;
+  background: #ffffff;
+  font-family: 'Roboto', sans-serif;
+  min-height: 100vh;
+}
+
+/* Status Bar Spacer */
+.school-connection-screen .status-bar-spacer {
+  height: 60px;
+  width: 100%;
+  background: #ffffff;
+}
+
+/* Header */
+.school-connection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: #E7E8E3;
+  border-bottom: none;
+}
+
+/* legacy back-button styles removed */
+
+.school-connection-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #447055;
+  margin: 0;
+}
+
+.header-spacer {
+  width: 40px;
+}
+
+/* Main Content */
+.school-connection-content {
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Connection Card */
+.connection-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  margin-bottom: 32px;
+}
+
+.connection-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c5f2c;
+  margin: 0 0 12px 0;
+}
+
+.connection-header p {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+/* Input Section */
+.input-section {
+  margin-bottom: 24px;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c5f2c;
+  margin-bottom: 8px;
+}
+
+.input-container {
+  position: relative;
+}
+
+.url-input {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #ffffff;
+  color: #000000;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.url-input:focus {
+  outline: none;
+  border-color: #447055;
+  box-shadow: 0 0 0 3px rgba(68, 112, 85, 0.1);
+}
+
+.url-input:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 14px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(231, 76, 60, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #e74c3c;
+}
+
+/* Connection Info */
+.connection-info {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.connection-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c5f2c;
+  margin: 0 0 16px 0;
+}
+
+.connection-info ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.connection-info li {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+/* Button Section */
+.button-section {
+  text-align: center;
+}
+
+.connect-button {
+  background: #00AA5B;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 140px;
+  margin: 0 auto;
+}
+
+.connect-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 170, 91, 0.3);
+}
+
+.connect-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Supported Platforms */
+.supported-platforms {
+  text-align: center;
+}
+
+.supported-platforms h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c5f2c;
+  margin: 0 0 20px 0;
+}
+
+.platforms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.platform-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.platform-item:hover {
+  background: #e9ecef;
+}
+
+.platform-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.platform-item span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c5f2c;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .school-connection-content {
+    padding: 16px;
+  }
+  
+  .connection-card {
+    padding: 20px;
+  }
+  
+  .connection-header h2 {
+    font-size: 20px;
+  }
+  
+  .platforms-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .platform-item {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .school-connection-content {
+    padding: 40px 20px;
+  }
+  
+  .connection-card {
+    padding: 32px;
+  }
+  
+  .platforms-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 500px;
+  }
+}

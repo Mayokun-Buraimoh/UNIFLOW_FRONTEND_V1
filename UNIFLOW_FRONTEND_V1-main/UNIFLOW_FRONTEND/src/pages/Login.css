@@ -1,0 +1,481 @@
+/* Login Screen Container - Completely Isolated */
+.login-screen {
+  --background: transparent !important;
+  background: #E7E8E3 !important;
+  position: relative !important;
+  height: 100vh !important;
+  width: 100vw !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  display: block !important;
+  flex-direction: unset !important;
+  justify-content: unset !important;
+  align-items: unset !important;
+}
+
+/* Video Container - Div-like Structure */
+.login-background {
+  position: relative !important;
+  width: 100% !important;
+  height: 400px !important;
+  margin: 0 !important;
+  z-index: 1 !important;
+  overflow: hidden !important;
+  border-bottom-right-radius: 220px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.login-bg-video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+  transform: scale(1.1) !important;
+  filter: blur(1.5px) !important;
+}
+
+/* Reset any inherited flex properties */
+.login-screen {
+  display: block !important;
+}
+
+.login-screen > * {
+  box-sizing: border-box !important;
+}
+
+/* CSS Reset for Login Screen to prevent conflicts */
+.login-screen .ion-content {
+  --background: transparent !important;
+  background: transparent !important;
+  display: block !important;
+  flex-direction: unset !important;
+  justify-content: unset !important;
+  align-items: unset !important;
+}
+
+/* Override any Ionic default styles */
+.login-screen ion-content {
+  --background: transparent !important;
+  background: transparent !important;
+  display: block !important;
+}
+
+/* Prevent flex inheritance from other screens */
+.login-screen,
+.login-screen *,
+.login-screen ion-content,
+.login-screen ion-content * {
+  flex-direction: unset !important;
+  justify-content: unset !important;
+  align-items: unset !important;
+  flex: unset !important;
+}
+
+/* Back Button */
+/* legacy back-button styles removed */
+
+/* Login Card */
+.login-card {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88%;
+  max-width: 380px;
+  background: linear-gradient(135deg, #f0f9f0 0%, #e0f2e0 100%);
+  border-radius: 20px;
+  padding: 32px 24px;
+  border: 2px solid #e0f2e0;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15), 0 3px 12px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  z-index: 5;
+  animation: loginSlideUp 0.8s ease-out 0.2s both;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+@keyframes loginSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 40px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.login-title {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c5f2c;
+  text-align: center;
+  margin: 0 0 14px 0;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+
+/* Login Form */
+.login-form {
+  display: block;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+/* Ionic Input Styling */
+.login-input-item {
+  --background: transparent !important;
+  --border-color: transparent !important;
+  --border-radius: 6px !important;
+  --border-width: 0 !important;
+  --border-style: none !important;
+  --padding-start: 10px !important;
+  --padding-end: 10px !important;
+  --padding-top: 6px !important;
+  --padding-bottom: 6px !important;
+  --min-height: 32px !important;
+  --inner-padding-start: 0 !important;
+  --inner-padding-end: 0 !important;
+  margin: 0 0 10px 0 !important;
+  border-radius: 6px !important;
+  background: white !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  --ripple-color: transparent !important;
+  position: relative !important;
+}
+
+.login-input-item:hover {
+  --border-color: transparent !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.login-input-item.item-has-focus {
+  --border-color: transparent !important;
+  --border-width: 0 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.login-input {
+  --color: #2c5f2c !important;
+  --placeholder-color: #a0aec0 !important;
+  --placeholder-opacity: 1 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  --padding-start: 16px !important;
+  --padding-end: 16px !important;
+  text-align: left !important;
+  margin-left: 8px !important;
+}
+
+.login-input-item ion-label {
+  --color: #2c5f2c !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  margin-bottom: 6px !important;
+  --padding-start: 0 !important;
+  --padding-end: 0 !important;
+  position: absolute !important;
+  top: -6px !important;
+  left: 10px !important;
+  background: white !important;
+  padding: 0 3px !important;
+  z-index: 15 !important;
+}
+
+/* Override Ionic default styles */
+.login-input-item .item-native {
+  background: white !important;
+  border-radius: 10px !important;
+  border: 2px solid #e2e8f0 !important;
+  padding: 14px 20px !important;
+}
+
+.login-input-item .item-native:hover {
+  border-color: #4caf50 !important;
+}
+
+.login-input-item .item-native.item-has-focus {
+  border-color: #4caf50 !important;
+}
+
+/* Ensure floating labels work properly */
+.login-input-item.item-has-focus ion-label {
+  --color: #4caf50 !important;
+  transform: translateY(-20px) scale(0.8) !important;
+}
+
+.login-input-item.item-has-value ion-label {
+  --color: #2c5f2c !important;
+  transform: translateY(-20px) scale(0.8) !important;
+}
+
+/* Fix input visibility */
+.login-input-item ion-input {
+  --padding-start: 0 !important;
+  --padding-end: 0 !important;
+  --padding-top: 0 !important;
+  --padding-bottom: 0 !important;
+  min-height: 20px !important;
+}
+
+/* Remove Ionic default item styling */
+.login-input-item {
+  --inner-padding-start: 0 !important;
+  --inner-padding-end: 0 !important;
+  --padding-start: 0 !important;
+  --padding-end: 0 !important;
+}
+
+/* Force input visibility and proper styling */
+.login-input-item ion-input {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 10 !important;
+  position: relative !important;
+  width: 100% !important;
+  height: auto !important;
+  text-align: left !important;
+}
+
+.login-input-item ion-label {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 5 !important;
+  position: relative !important;
+}
+
+/* Ensure the input container is visible */
+.login-input-item .item-inner {
+  display: flex !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
+  background: white !important;
+  border-radius: 6px !important;
+  border: none !important;
+  min-height: 32px !important;
+}
+
+.login-input-item .item-inner:hover {
+  border-color: transparent !important;
+}
+
+.login-input-item .item-inner.item-has-focus {
+  border-color: transparent !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.login-submit-button {
+  width: 100%;
+  padding: 14px 20px;
+  background: #4caf50 !important;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.25);
+  margin-top: 12px;
+  --background: #4caf50 !important;
+  --background-activated: #45a049 !important;
+  --background-focused: #45a049 !important;
+  --background-hover: #45a049 !important;
+  text-transform: none;
+  letter-spacing: 0.2px;
+  --border-radius: 8px !important;
+  --box-shadow: none !important;
+}
+
+.login-submit-button:hover {
+  background: #45a049 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(76, 175, 80, 0.35);
+}
+
+/* Email Error Message */
+.email-error-message {
+  color: #e53e3e;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  margin: -8px 0 8px 0;
+  padding: 0 16px;
+  text-align: left;
+  animation: errorSlideIn 0.3s ease-out;
+}
+
+@keyframes errorSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Legal Text */
+.login-legal-text {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  color: #2c5f2c;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  z-index: 5;
+  max-width: 260px;
+}
+
+.login-legal-link {
+  color: #4caf50;
+  text-decoration: none;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  transition: color 0.2s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  /* Video Container */
+  .login-background {
+    height: 250px;
+    border-bottom-right-radius: 120px;
+  }
+  
+  /* Login Card */
+  .login-card {
+    bottom: 10px;
+    padding: 20px 16px;
+    width: 90%;
+    max-width: 320px;
+  }
+  
+  .login-title {
+    font-size: 20px;
+    margin: 0 0 8px 0;
+  }
+  
+  .login-form {
+    gap: 8px;
+  }
+  
+  .login-input-item {
+    --min-height: 40px !important;
+    --padding-start: 12px !important;
+    --padding-end: 12px !important;
+    --padding-top: 8px !important;
+    --padding-bottom: 8px !important;
+  }
+  
+  .login-input-item .item-inner {
+    padding: 8px 12px !important;
+    min-height: 40px !important;
+  }
+  
+  .login-input {
+    font-size: 14px !important;
+  }
+  
+  .login-submit-button {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+  
+  /* Legal Text */
+  .login-legal-text {
+    bottom: 15px;
+    font-size: 10px;
+    max-width: 260px;
+  }
+  
+  /* Back Button */
+  .login-back-button {
+    top: 35px;
+    left: 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 375px) {
+  /* Video Container */
+  .login-background {
+    height: 220px;
+    border-bottom-right-radius: 100px;
+  }
+  
+  /* Login Card */
+  .login-card {
+    bottom: 8px;
+    padding: 14px 10px;
+    width: 92%;
+    max-width: 280px;
+  }
+  
+  .login-title {
+    font-size: 16px;
+    margin: 0 0 4px 0;
+  }
+  
+  .login-form {
+    gap: 6px;
+  }
+  
+  .login-input-item {
+    --min-height: 30px !important;
+    --padding-start: 8px !important;
+    --padding-end: 8px !important;
+    --padding-top: 5px !important;
+    --padding-bottom: 5px !important;
+  }
+  
+  .login-input-item .item-inner {
+    padding: 5px 8px !important;
+    min-height: 30px !important;
+  }
+  
+  .login-input {
+    font-size: 11px !important;
+  }
+  
+  .login-input-item ion-label {
+    font-size: 10px !important;
+  }
+  
+  .login-submit-button {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  
+  /* Legal Text */
+  .login-legal-text {
+    bottom: 12px;
+    font-size: 9px;
+    max-width: 240px;
+  }
+  
+  /* Back Button */
+  .login-back-button {
+    top: 30px;
+    left: 10px;
+    font-size: 11px;
+  }
+}

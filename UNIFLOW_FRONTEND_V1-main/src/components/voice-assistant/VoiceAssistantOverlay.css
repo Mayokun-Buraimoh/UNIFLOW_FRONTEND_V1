@@ -1,0 +1,226 @@
+/* Full-screen transparent interaction layer — hub lives in BottomNavigation */
+
+.voice-assistant-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10040;
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 0.32s ease;
+}
+
+.voice-assistant-root--closing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.voice-assistant-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  background: transparent;
+  z-index: 0;
+  /* Circular “cutout” so the enlarged chatbot hub + orbits are never dimmed */
+  --voice-cutout-r: 90px;
+  --voice-cutout-y: calc(100% + 36px);
+  -webkit-mask-image: radial-gradient(
+    circle var(--voice-cutout-r) at 50% var(--voice-cutout-y),
+    transparent calc(var(--voice-cutout-r) - 1px),
+    #000 var(--voice-cutout-r)
+  );
+  mask-image: radial-gradient(
+    circle var(--voice-cutout-r) at 50% var(--voice-cutout-y),
+    transparent calc(var(--voice-cutout-r) - 1px),
+    #000 var(--voice-cutout-r)
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.voice-assistant-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Compact dock above navbar — no large popup */
+.voice-assistant-dock {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: max(200px, calc(88px + env(safe-area-inset-bottom) + 72px));
+  max-width: 400px;
+  margin: 0 auto;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(22, 22, 28, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  transform: translateZ(0);
+  pointer-events: auto;
+}
+
+.voice-assistant-dock--bubble {
+  left: 50%;
+  right: auto;
+  bottom: calc(88px + env(safe-area-inset-bottom) + 52px);
+  transform: translateX(-50%);
+  width: auto;
+  max-width: min(88vw, 320px);
+  padding: 10px 18px;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(22, 22, 28, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+.voice-assistant-transcript {
+  width: 100%;
+  text-align: center;
+  min-height: 2.5rem;
+}
+
+.voice-assistant-dock--bubble .voice-assistant-transcript {
+  min-height: auto;
+}
+
+.voice-assistant-transcript-text {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 16px;
+  line-height: 1.45;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+}
+
+.voice-assistant-hint {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  font-family: 'Roboto', sans-serif;
+}
+
+.voice-assistant-dock--bubble .voice-assistant-hint,
+.voice-assistant-dock--bubble .voice-assistant-transcript-text {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.voice-assistant-hint--warn {
+  color: rgba(255, 200, 120, 0.95);
+  font-size: 13px;
+}
+
+.voice-assistant-response {
+  margin: 10px 0 0;
+  color: rgba(180, 220, 255, 0.95);
+  font-size: 14px;
+  line-height: 1.4;
+  font-family: 'Roboto', sans-serif;
+}
+
+.voice-assistant-fallback {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voice-assistant-fallback-label {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: 'Roboto', sans-serif;
+}
+
+.voice-assistant-fallback-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: 'Roboto', sans-serif;
+  resize: vertical;
+  min-height: 56px;
+  box-sizing: border-box;
+}
+
+.voice-assistant-fallback-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.voice-assistant-fallback-send,
+.voice-assistant-send-voice,
+.voice-assistant-done {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Roboto', sans-serif;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.voice-assistant-fallback-send,
+.voice-assistant-send-voice {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+}
+
+.voice-assistant-send-voice {
+  width: 100%;
+}
+
+.voice-assistant-done {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.voice-assistant-fallback-send:active,
+.voice-assistant-send-voice:active,
+.voice-assistant-done:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 375px) {
+  .voice-assistant-dock {
+    bottom: max(188px, calc(72px + env(safe-area-inset-bottom) + 64px));
+    padding: 14px 16px;
+  }
+
+  .voice-assistant-dock--bubble {
+    bottom: calc(72px + env(safe-area-inset-bottom) + 34px);
+    max-width: min(90vw, 300px);
+    padding: 9px 14px;
+  }
+
+  .voice-assistant-backdrop {
+    --voice-cutout-r: 78px;
+    --voice-cutout-y: calc(100% + 28px);
+  }
+}
