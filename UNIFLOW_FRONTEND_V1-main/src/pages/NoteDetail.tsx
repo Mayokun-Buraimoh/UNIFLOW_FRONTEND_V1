@@ -39,11 +39,12 @@ import {
   saveNoteReadingProgressIfGreater,
 } from '../utils/noteReadingProgress';
 import { NOTE_PDF_UPDATED_EVENT } from '../utils/notePdfStorage';
+import { resolveDjangoAiOrigin } from '../constants/djangoAiPublic';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-// Django API base — separate from the TS backend
-const DJANGO_API_URL = import.meta.env.VITE_DJANGO_API_URL || 'http://localhost:8000';
+// Django API base — separate from the TS backend and environment-aware.
+const DJANGO_API_URL = resolveDjangoAiOrigin();
 
 interface Flashcard {
   id: number;

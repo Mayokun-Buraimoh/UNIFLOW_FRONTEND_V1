@@ -1,4 +1,6 @@
-const AI_API_URL = 'http://localhost:8000/api/v1';
+import { resolveAiApiRoot } from '../constants/djangoAiPublic';
+
+const AI_API_URL = resolveAiApiRoot();
 
 export interface ChatMessage {
     id: string;
