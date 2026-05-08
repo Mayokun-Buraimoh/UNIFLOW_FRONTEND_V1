@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useHistory } from 'react-router-dom';
 import apiService from '../services/apiService';
+import {
+  clearUserScopedLocalStorage,
+  clearUserScopedStorageIfUserChanged,
+  readUserIdFromStorage,
+} from '../utils/clearUserScopedStorage';
 
 export interface User {
   id: string;
@@ -282,6 +287,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('refreshToken');
 
       const response = await apiAuthService.register(data);
+      clearUserScopedLocalStorage();
       setUser(response.user);
       setAuthState(true); // Ensure auth state is set immediately
       console.log('AuthContext: Registration successful, user set:', response.user);
@@ -299,6 +305,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
+      const previousUserId = readUserIdFromStorage();
       // Clear any existing authentication before logging in
       console.log('AuthContext: Clearing existing auth before login');
       localStorage.removeItem('uniflow_token');
@@ -306,6 +313,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('refreshToken');
 
       const response = await apiAuthService.login(data);
+      clearUserScopedStorageIfUserChanged(previousUserId, response.user.id);
       setUser(response.user);
       setAuthState(true); // Ensure auth state is set immediately
       console.log('AuthContext: Login successful, user set:', response.user);
@@ -348,6 +356,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     apiAuthService.logout();
+    clearUserScopedLocalStorage();
     setUser(null);
     setError(null);
     setAuthState(false);

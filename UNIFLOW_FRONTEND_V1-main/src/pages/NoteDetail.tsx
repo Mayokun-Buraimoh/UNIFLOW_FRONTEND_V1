@@ -24,6 +24,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
+import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { aiClient, ChatMessage } from '../api/aiClient';
 import { useAuth } from '../contexts/AuthContext';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -38,10 +39,11 @@ import {
   loadNoteReadingProgress,
   saveNoteReadingProgressIfGreater,
 } from '../utils/noteReadingProgress';
-import { NOTE_PDF_UPDATED_EVENT } from '../utils/notePdfStorage';
+import { NOTE_PDF_UPDATED_EVENT, setNotePdfDataInStorage } from '../utils/notePdfStorage';
 import { resolveDjangoAiOrigin } from '../constants/djangoAiPublic';
+import { getApiBaseUrl } from '../constants/apiBaseUrl';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 // Django API base — separate from the TS backend and environment-aware.
 const DJANGO_API_URL = resolveDjangoAiOrigin();
@@ -225,6 +227,11 @@ const NoteDetail: React.FC = () => {
   const [summarySections, setSummarySections] = useState<SummarySection[]>([]);
   const [summaryOverview, setSummaryOverview] = useState<string>("");
   const [summaryLoading, setSummaryLoading] = useState(false);
+  /**
+   * The study AI endpoints expect a UUID from `course_files.id`.
+   * When the route `id` is a numeric note id (`course_notes.id`), we must promote it first.
+   */
+  const [aiPdfId, setAiPdfId] = useState<string | null>(null);
 
   // Metadata states
   const [documentName, setDocumentName] = useState<string>("");
@@ -316,13 +323,51 @@ const NoteDetail: React.FC = () => {
     };
   }, []);
 
+  const fetchAndCachePdfForFile = useCallback(async (courseId: string, fileId: string): Promise<string | null> => {
+    if (!courseId || !fileId) return null;
+    try {
+      const token = localStorage.getItem('uniflow_token');
+      if (!token) return null;
+      const apiBase = getApiBaseUrl().replace(/\/$/, '');
+      const downloadUrl = `${apiBase}/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}`;
+      const res = await fetch(downloadUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(String(ev.target?.result || ''));
+        reader.onerror = () => reject(new Error('Failed to read PDF blob'));
+        reader.readAsDataURL(blob);
+      });
+      if (!dataUrl.startsWith('data:application/pdf;base64,')) return null;
+      setNotePdfDataInStorage(fileId, dataUrl);
+      return dataUrl;
+    } catch (error) {
+      console.warn('Failed to fetch/cache note PDF from backend', error);
+      return null;
+    }
+  }, []);
+
   const syncNotePayloadFromStorage = useCallback((targetId: string) => {
     if (!targetId) return;
-    const data = localStorage.getItem(`uniflow_note_data_${targetId}`);
-    setPdfData(data);
     const noteContext = getStoredNoteContext(targetId);
-    setStoredFileMeta(noteContext.fileMeta || getStoredFileMeta(targetId));
+    const fileMeta = noteContext.fileMeta || getStoredFileMeta(targetId);
+    setStoredFileMeta(fileMeta);
     setStoredNoteContext(noteContext);
+
+    const hydrate = async () => {
+      const primaryKey = `uniflow_note_data_${targetId}`;
+      const fileId = String(fileMeta?.id || targetId);
+      const fileKey = `uniflow_note_data_${fileId}`;
+      let data = localStorage.getItem(primaryKey) || localStorage.getItem(fileKey);
+      if (!data && noteContext.courseId && fileId) {
+        data = await fetchAndCachePdfForFile(noteContext.courseId, fileId);
+      }
+      setPdfData(data || null);
+    };
+    void hydrate();
 
     if (noteContext.documentName) {
       setDocumentName((current) => current || noteContext.documentName);
@@ -330,7 +375,7 @@ const NoteDetail: React.FC = () => {
     if (noteContext.courseName) {
       setCourseName((current) => current || noteContext.courseName);
     }
-  }, [getStoredFileMeta, getStoredNoteContext]);
+  }, [fetchAndCachePdfForFile, getStoredFileMeta, getStoredNoteContext]);
 
   const resolvedCourseName = courseName || storedNoteContext.courseName || 'Study Session';
   const resolvedDocumentName = documentName || storedNoteContext.documentName || storedFileMeta?.title || 'Focus Session';
@@ -469,6 +514,46 @@ const NoteDetail: React.FC = () => {
     }
   }, []);
 
+  const ensureAiPdfId = useCallback(
+    async (rawId: string): Promise<string> => {
+      const s = (rawId || '').trim();
+      if (!s) return s;
+
+      // UUID ids (course_files.id) work as-is. Note ids tend to be numeric strings.
+      const isNumeric = /^\d+$/.test(s);
+      if (!isNumeric) {
+        setAiPdfId(s);
+        return s;
+      }
+
+      try {
+        const token = localStorage.getItem('uniflow_token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        const res = await fetch(`${DJANGO_API_URL}/api/notes/promote-for-ai/`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ note_id: s }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const promoted = String(data?.pdf_id || '').trim();
+        if (promoted) {
+          setAiPdfId(promoted);
+          return promoted;
+        }
+      } catch (e) {
+        console.error('Failed to promote note for AI:', e);
+      }
+
+      // Fallback: keep the raw id so UI still works (though study endpoints may 500).
+      setAiPdfId(s);
+      return s;
+    },
+    []
+  );
+
   // PATCH is_mastered status back to Django
   const toggleMastered = async (flashcard: Flashcard) => {
     const newMastered = !flashcard.isMastered;
@@ -604,11 +689,23 @@ const NoteDetail: React.FC = () => {
 
   // Check for existing flashcards and quizzes in DB whenever a Note id is present
   useEffect(() => {
-    if (id) {
-      fetchFlashcards(id);
-      fetchQuizzes(id);
-      fetchSummary(id);
-    }
+    if (!id) return;
+    let alive = true;
+    (async () => {
+      const pdfId = await ensureAiPdfId(id);
+      if (!alive) return;
+      // If we're still on a numeric id (not a UUID) we can't call study endpoints (they expect course_files UUIDs).
+      if (/^\d+$/.test(id) && pdfId === id) {
+        console.warn('Study AI skipped: note id is not linked to a course_files UUID. Upload/select a course file to use AI.');
+        return;
+      }
+      fetchFlashcards(pdfId);
+      fetchQuizzes(pdfId);
+      fetchSummary(pdfId);
+    })();
+    return () => {
+      alive = false;
+    };
   }, [id, fetchFlashcards, fetchQuizzes, fetchSummary]);
 
   const [containerWidth, setContainerWidth] = useState<number>(window.innerWidth - 40);

@@ -7,6 +7,7 @@ import { services } from '../api/services';
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
 import { getNoteReadingProgressPercent } from '../utils/noteReadingProgress';
 import { setNotePdfDataInStorage } from '../utils/notePdfStorage';
+import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStorage';
 import './CourseDetail.css';
 
 interface Course {
@@ -49,9 +50,7 @@ const CourseDetail: React.FC = () => {
     // Enables horizontal swipe back gesture on this page
     useSwipeBack(!showUploadMenu);
 
-    // Mock initial state for files to mimic screenshot (only load if no local storage for this course)
-    // Actually, let's persist files in localStorage per course
-    useEffect(() => {
+    const loadCourseAndFiles = React.useCallback(() => {
         const savedCourses = localStorage.getItem('uniflow_courses');
         if (savedCourses) {
             try {
@@ -59,10 +58,15 @@ const CourseDetail: React.FC = () => {
                 const course = courses.find((c) => c.id === id);
                 if (course) {
                     setCourseName(course.name);
+                } else {
+                    setCourseName('Course');
                 }
             } catch (err) {
                 console.error('Failed to parse courses', err);
+                setCourseName('Course');
             }
+        } else {
+            setCourseName('Course');
         }
 
         const savedFiles = localStorage.getItem(`uniflow_files_${id}`);
@@ -83,6 +87,17 @@ const CourseDetail: React.FC = () => {
             setFiles([]);
         }
     }, [id]);
+
+    // Mock initial state for files to mimic screenshot (only load if no local storage for this course)
+    // Actually, let's persist files in localStorage per course
+    useEffect(() => {
+        loadCourseAndFiles();
+    }, [loadCourseAndFiles]);
+
+    useEffect(() => {
+        window.addEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, loadCourseAndFiles);
+        return () => window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, loadCourseAndFiles);
+    }, [loadCourseAndFiles]);
 
     useEffect(() => {
         if (files.length > 0) {

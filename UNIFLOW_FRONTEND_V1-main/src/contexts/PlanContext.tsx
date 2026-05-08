@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStorage';
 
 export interface Objective {
     id: string;
@@ -114,6 +115,12 @@ export const PlanProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         localStorage.setItem('uniflow_plans', JSON.stringify(plans));
     }, [plans]);
+
+    useEffect(() => {
+        const onCleared = () => setPlans([]);
+        window.addEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, onCleared);
+        return () => window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, onCleared);
+    }, []);
 
     useEffect(() => {
         const resetFlag = 'uniflow_plans_hard_reset_v1';

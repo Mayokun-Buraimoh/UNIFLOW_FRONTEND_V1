@@ -24,6 +24,7 @@ import {
 } from 'ionicons/icons';
 import { useHistory, useParams } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
+import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { aiClient, ChatMessage } from '../api/aiClient';
 import { useAuth } from '../contexts/AuthContext';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -38,7 +39,7 @@ import {
   saveNoteReadingProgressIfGreater,
 } from '../utils/noteReadingProgress';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 // Django API base — separate from the TS backend
 const DJANGO_API_URL = import.meta.env.VITE_DJANGO_API_URL || 'http://localhost:8000';

@@ -4,6 +4,7 @@ import { IonContent, IonPage, IonSpinner } from '@ionic/react';
 import { useAuth } from '../contexts/AuthContext';
 import './Dashboard.css';
 import { getDefaultStartPath } from '../utils/appPreferences';
+import { clearUserScopedStorageIfUserChanged, readUserIdFromStorage } from '../utils/clearUserScopedStorage';
 
 const Dashboard: React.FC = () => {
   const history = useHistory();
@@ -19,13 +20,15 @@ const Dashboard: React.FC = () => {
 
       if (token && refreshToken && userStr) {
         try {
+          const previousUserId = readUserIdFromStorage();
+          const userData = JSON.parse(userStr);
+          clearUserScopedStorageIfUserChanged(previousUserId, userData.id);
+
           // Store tokens and user data
           localStorage.setItem('uniflow_token', token);
           localStorage.setItem('refreshToken', refreshToken);
           localStorage.setItem('uniflow_user', userStr);
 
-          // Parse user data (user will be set automatically by AuthContext)
-          const userData = JSON.parse(userStr);
           console.log('OAuth user data:', userData);
 
           console.log('OAuth callback successful, tokens stored');

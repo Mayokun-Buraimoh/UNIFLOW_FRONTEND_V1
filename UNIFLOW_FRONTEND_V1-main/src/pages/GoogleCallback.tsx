@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../api/client';
 import { getDefaultStartPath } from '../utils/appPreferences';
+import { clearUserScopedStorageIfUserChanged, readUserIdFromStorage } from '../utils/clearUserScopedStorage';
 
 const GoogleCallback: React.FC = () => {
   const history = useHistory();
@@ -39,6 +40,7 @@ const GoogleCallback: React.FC = () => {
         if (token && userParam) {
           setStatus('Storing authentication...');
           
+          const previousUserId = readUserIdFromStorage();
           // Clear any existing authentication first
           console.log('Google OAuth: Clearing existing auth before setting new session');
           localStorage.removeItem('uniflow_token');
@@ -50,6 +52,7 @@ const GoogleCallback: React.FC = () => {
           // Parse user data from URL (no extra API call needed!)
           setStatus('Loading profile...');
           const userData = JSON.parse(decodeURIComponent(userParam));
+          clearUserScopedStorageIfUserChanged(previousUserId, userData.id);
           
           console.log('Google OAuth raw user data:', userData);
           console.log('Google OAuth user data type:', typeof userData);

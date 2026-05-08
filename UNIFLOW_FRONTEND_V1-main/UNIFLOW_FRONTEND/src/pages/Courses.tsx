@@ -44,6 +44,7 @@ const Courses: React.FC = () => {
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const createCourseSubmittingRef = useRef(false);
 
   const handlePressStart = (course: Course) => {
     pressTimerRef.current = setTimeout(() => {
@@ -134,39 +135,46 @@ const Courses: React.FC = () => {
   };
 
   const createCourse = async (name: string) => {
-    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
     const token = localStorage.getItem('uniflow_token');
+    const lastOpened = new Date()
+      .toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
+      .replace(/\//g, '-');
 
-    // If signed in, try to create on the backend and fall back to localStorage
     if (token) {
       try {
-        const resp: any = await services.course.createCourse({ name: name.toUpperCase(), code: name.toUpperCase() });
-        // Map backend response to local Course shape used by this page
+        const resp: any = await services.course.createCourse({
+          name: trimmed.toUpperCase(),
+          code: trimmed.toUpperCase(),
+        });
         const created = resp?.id ? resp : resp?.course ? resp.course : resp;
-        const newCourse: Course = {
-          id: created.id || Date.now().toString(),
-          name: (created.name || name).toUpperCase(),
-          notesCount: 0,
-          lastOpened: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-'),
-          colorTheme: THEMES[courses.length % THEMES.length],
-        };
-        setCourses(prev => [...prev, newCourse]);
+        setCourses((prev) => {
+          const newCourse: Course = {
+            id: String(created.id || Date.now()),
+            name: (created.name || trimmed).toUpperCase(),
+            notesCount: 0,
+            lastOpened,
+            colorTheme: THEMES[prev.length % THEMES.length],
+          };
+          return [...prev, newCourse];
+        });
         return;
       } catch (err) {
-        // Fall through to local creation
         console.warn('Create course on server failed, falling back to local:', err);
       }
     }
 
-    // Local fallback
-    const fallback: Course = {
-      id: Date.now().toString(),
-      name: name.toUpperCase(),
-      notesCount: 0,
-      lastOpened: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-'),
-      colorTheme: THEMES[courses.length % THEMES.length],
-    };
-    setCourses(prev => [...prev, fallback]);
+    setCourses((prev) => {
+      const fallback: Course = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        name: trimmed.toUpperCase(),
+        notesCount: 0,
+        lastOpened,
+        colorTheme: THEMES[prev.length % THEMES.length],
+      };
+      return [...prev, fallback];
+    });
   };
 
   const getFileIcon = (theme: string) => {
@@ -182,7 +190,15 @@ const Courses: React.FC = () => {
   return (
     <IonPage>
       <IonContent fullscreen className="courses-page-new">
-        <div className="courses-minimal-container">
+        <div
+          className={[
+            'courses-minimal-container',
+            showOptionsPopup ? 'courses-shell--options-open' : '',
+            showAddPopover ? 'courses-shell--add-open' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
 
           <div className="courses-header-new">
             <BackButton />
@@ -362,11 +378,26 @@ const Courses: React.FC = () => {
               {
                 text: 'Create',
                 cssClass: 'alert-btn-create',
-                handler: async (data) => {
-                  await createCourse(data.folderName);
+                handler: (data) => {
+                  const raw =
+                    data && typeof (data as { folderName?: string }).folderName === 'string'
+                      ? (data as { folderName: string }).folderName
+                      : '';
+                  const title = raw.trim();
+                  if (!title) {
+                    return false;
+                  }
+                  if (createCourseSubmittingRef.current) {
+                    return false;
+                  }
+                  createCourseSubmittingRef.current = true;
                   setShowNameAlert(false);
-                }
-              }
+                  void createCourse(title).finally(() => {
+                    createCourseSubmittingRef.current = false;
+                  });
+                  return true;
+                },
+              },
             ]}
           />
         </div>

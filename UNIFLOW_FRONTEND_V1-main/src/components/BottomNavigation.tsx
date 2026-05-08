@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useIonRouter } from '@ionic/react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useLongPress } from '../hooks/useLongPress';
 import VoiceAssistantOverlay, { type AssistantPhase } from './voice-assistant/VoiceAssistantOverlay';
 import './BottomNavigation.css';
 
 const BottomNavigation: React.FC = () => {
+  const ionRouter = useIonRouter();
   const history = useHistory();
   const location = useLocation();
   const [voiceAssistantOpen, setVoiceAssistantOpen] = useState(false);
@@ -19,19 +21,46 @@ const BottomNavigation: React.FC = () => {
     }
   }, [voiceAssistantOpen]);
 
-  const handleNavigation = useCallback((path: string) => {
-    const focusedElement = document.activeElement as HTMLElement;
-    if (focusedElement) {
-      focusedElement.blur();
-    }
+  /** Root tabs: replace Ionic stack so a previous /course/:id page cannot stay visible under a highlighted tab. */
+  const navigateToMainTab = useCallback(
+    (path: string) => {
+      const focusedElement = document.activeElement as HTMLElement;
+      focusedElement?.blur();
 
-    try {
-      history.push(path);
-    } catch (error) {
-      console.error('React Router failed, using window.location:', error);
-      window.location.href = path;
-    }
-  }, [history]);
+      try {
+        ionRouter.push(path, 'root', 'replace');
+      } catch (error) {
+        console.error('IonRouter navigation failed, falling back to history.replace:', error);
+        try {
+          history.replace(path);
+        } catch (e) {
+          console.error('history.replace failed:', e);
+          window.location.href = path;
+        }
+      }
+    },
+    [history, ionRouter],
+  );
+
+  const navigateForward = useCallback(
+    (path: string) => {
+      const focusedElement = document.activeElement as HTMLElement;
+      focusedElement?.blur();
+
+      try {
+        ionRouter.push(path, 'forward', 'push');
+      } catch (error) {
+        console.error('IonRouter forward navigation failed, falling back to history.push:', error);
+        try {
+          history.push(path);
+        } catch (e) {
+          console.error('history.push failed:', e);
+          window.location.href = path;
+        }
+      }
+    },
+    [history, ionRouter],
+  );
 
   const openVoiceAssistant = useCallback(() => {
     setVoiceAssistantOpen(true);
@@ -45,11 +74,11 @@ const BottomNavigation: React.FC = () => {
   }, []);
 
   const navigateChatbot = useCallback(() => {
-    handleNavigation('/chatbot');
+    navigateForward('/chatbot');
     requestAnimationFrame(() => {
       centralChatRef.current?.blur();
     });
-  }, [handleNavigation]);
+  }, [navigateForward]);
 
   const chatbotLongPress = useLongPress({
     onLongPress: openVoiceAssistant,
@@ -59,7 +88,14 @@ const BottomNavigation: React.FC = () => {
   });
 
   const isActive = (path: string) => {
-    return location.pathname === path;
+    const { pathname } = location;
+    if (path === '/courses') {
+      return pathname === '/courses' || pathname.startsWith('/course/') || pathname.startsWith('/note/');
+    }
+    if (path === '/plans') {
+      return pathname === '/plans' || pathname.startsWith('/plans/');
+    }
+    return pathname === path;
   };
 
   return (
@@ -74,7 +110,7 @@ const BottomNavigation: React.FC = () => {
       {/* Home */}
       <div
         className={`nav-item ${isActive('/home') ? 'active' : ''}`}
-        onClick={() => handleNavigation('/home')}
+        onClick={() => navigateToMainTab('/home')}
       >
         <div className="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -87,7 +123,7 @@ const BottomNavigation: React.FC = () => {
       {/* Plans */}
       <div
         className={`nav-item ${isActive('/plans') ? 'active' : ''}`}
-        onClick={() => handleNavigation('/plans')}
+        onClick={() => navigateToMainTab('/plans')}
       >
         <div className="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -147,7 +183,7 @@ const BottomNavigation: React.FC = () => {
       {/* Courses */}
       <div
         className={`nav-item ${isActive('/courses') ? 'active' : ''}`}
-        onClick={() => handleNavigation('/courses')}
+        onClick={() => navigateToMainTab('/courses')}
       >
         <div className="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -160,7 +196,7 @@ const BottomNavigation: React.FC = () => {
       {/* Settings */}
       <div
         className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
-        onClick={() => handleNavigation('/settings')}
+        onClick={() => navigateToMainTab('/settings')}
       >
         <div className="nav-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

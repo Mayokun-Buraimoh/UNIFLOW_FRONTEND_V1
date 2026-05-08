@@ -83,6 +83,19 @@
   height: 14px;
 }
 
+/* When folder options menu is open, keep the list above the full-screen dimmer (z-index: 90)
+   so Rename / Delete on the inline tray receive pointer events. */
+.courses-shell--options-open .courses-list {
+  position: relative;
+  z-index: 100;
+}
+
+/* "Add new folder" popover lives in the header; lift it above the same dimmer. */
+.courses-shell--add-open .courses-header-new {
+  position: relative;
+  z-index: 100;
+}
+
 /* Base Body Area */
 .courses-body {
   flex: 1;
@@ -403,8 +416,9 @@ ion-alert.custom-ui-alert .alert-button.alert-btn-create {
 }
 
 .rename-btn {
-  color: #ffffff;
-  /* White text color */
+  color: #1b4332;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
 }
 
 .delete-btn {
