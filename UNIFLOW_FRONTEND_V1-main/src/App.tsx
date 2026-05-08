@@ -1,6 +1,7 @@
 import { Redirect, Route } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider } from './contexts/PlanContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
@@ -32,6 +33,8 @@ import NoteDetail from './pages/NoteDetail';
 import Overview from './pages/Overview';
 import Jotting from './pages/Jotting';
 import Pricing from './pages/Pricing';
+import { useStreak } from './hooks/useStreak';
+import { initializeLocalFirstSync } from './localfirst/syncQueue';
 const RootRoute = () => {
   const { loading } = useAuth();
 
@@ -40,6 +43,14 @@ const RootRoute = () => {
   }
 
   return <Redirect to="/splash" />;
+};
+
+const StreakActivityTracker = () => {
+  useStreak({ trackActivity: true });
+  useEffect(() => {
+    initializeLocalFirstSync();
+  }, []);
+  return null;
 };
 
 /* Core CSS required for Ionic components to work properly */
@@ -85,6 +96,7 @@ const App: React.FC = () => {
       <IonApp>
         <IonReactRouter>
           <AuthProvider>
+            <StreakActivityTracker />
             <SubscriptionProvider>
               <PlanProvider>
                 <IonRouterOutlet>

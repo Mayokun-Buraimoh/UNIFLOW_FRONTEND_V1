@@ -287,13 +287,14 @@ ion-alert.custom-ui-alert .alert-wrapper {
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
   border-radius: 20px !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
-  width: 236px !important;
-  height: 234px !important;
+  width: min(320px, calc(100vw - 40px)) !important;
+  min-height: 240px !important;
+  height: auto !important;
   max-width: 90% !important;
-  padding: 32px 24px 24px 24px !important;
+  padding: 24px 20px 20px 20px !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: space-between !important;
+  justify-content: flex-start !important;
 }
 
 ion-alert.custom-ui-alert .alert-head {
@@ -302,29 +303,30 @@ ion-alert.custom-ui-alert .alert-head {
 
 ion-alert.custom-ui-alert .alert-message {
   color: #ffffff !important;
-  font-size: 15px !important;
+  font-size: 14px !important;
   font-weight: 700 !important;
   text-align: center !important;
   line-height: 1.4 !important;
-  padding: 0 0 16px 0 !important;
+  padding: 0 0 12px 0 !important;
   margin: 0 !important;
   white-space: pre-line !important;
 }
 
 ion-alert.custom-ui-alert .alert-input-group {
   padding: 0 !important;
+  margin-bottom: 14px !important;
 }
 
 ion-alert.custom-ui-alert input.alert-input {
   background-color: #d1d1d1 !important;
   border-radius: 15px !important;
   color: #333333 !important;
-  padding: 16px 24px !important;
-  font-size: 16px !important;
+  padding: 12px 14px !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
   border: none !important;
   box-shadow: none !important;
-  width: 170px !important;
+  width: 100% !important;
   margin: 0 auto !important;
   display: block !important;
   outline: none !important;
@@ -343,12 +345,13 @@ ion-alert.custom-ui-alert input.alert-input:focus {
 
 /* Style buttons subtly to match minimalistic aesthetic */
 ion-alert.custom-ui-alert .alert-button-group {
-  margin-top: auto !important;
+  margin-top: 0 !important;
   border-top: none !important;
-  justify-content: space-between !important;
-  gap: 12px;
+  justify-content: center !important;
+  gap: 10px;
   padding: 0 4px !important;
   display: flex !important;
+  flex-direction: column !important;
   width: 100% !important;
 }
 
@@ -356,10 +359,10 @@ ion-alert.custom-ui-alert .alert-button {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
   font-weight: 600 !important;
-  border-radius: 12px;
+  border-radius: 12px !important;
   margin: 0 !important;
-  flex: 1 !important;
-  height: 48px !important;
+  width: 100% !important;
+  min-height: 42px !important;
   text-transform: none !important;
   display: flex !important;
   justify-content: center !important;
@@ -375,6 +378,37 @@ ion-alert.custom-ui-alert .alert-button-inner.sc-ion-alert-ios {
 ion-alert.custom-ui-alert .alert-button.alert-btn-create {
   background: #2ECC71 !important;
   color: white !important;
+}
+
+ion-alert.custom-ui-alert.custom-ui-alert-limit .alert-head {
+  display: block !important;
+  padding: 0 0 8px 0 !important;
+}
+
+ion-alert.custom-ui-alert.custom-ui-alert-limit .alert-title {
+  color: #ffffff !important;
+  text-align: center !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+ion-alert.custom-ui-alert.custom-ui-alert-limit .alert-message {
+  padding: 0 0 14px 0 !important;
+}
+
+/* iOS WebView hardening for alert/input caret stability */
+@supports (-webkit-touch-callout: none) {
+  ion-alert.custom-ui-alert .alert-wrapper {
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    transform: none !important;
+  }
+
+  ion-alert.custom-ui-alert input.alert-input {
+    background-color: rgba(255, 255, 255, 0.86) !important;
+    font-size: 16px !important;
+    transform: none !important;
+  }
 }
 
 /* Inline Options Popup - styled as a vertical tray */

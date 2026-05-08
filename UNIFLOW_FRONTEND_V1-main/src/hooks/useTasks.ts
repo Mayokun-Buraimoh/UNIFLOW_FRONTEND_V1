@@ -1,5 +1,55 @@
 import { useState, useEffect, useCallback } from 'react';
 import { taskService, Task, TaskStats } from '../api/services';
+import { createLocalFirst, deleteLocalFirst, updateLocalFirst } from '../localfirst/syncQueue';
+
+const TASK_STORAGE_KEY = 'uniflow_tasks';
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Unexpected error';
+
+const readLocalTasks = (): Task[] => {
+  try {
+    const raw = localStorage.getItem(TASK_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeLocalTasks = (tasks: Task[]) => {
+  localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(tasks));
+};
+
+const applyTaskFilters = (
+  tasks: Task[],
+  filters?: { status?: string; priority?: string; limit?: number; offset?: number }
+) => {
+  let next = [...tasks];
+  if (filters?.status) {
+    next = next.filter((task) => task.status === filters.status);
+  }
+  if (filters?.priority) {
+    next = next.filter((task) => task.priority === filters.priority);
+  }
+  const offset = filters?.offset || 0;
+  const limit = filters?.limit;
+  if (offset || limit) {
+    next = next.slice(offset, typeof limit === 'number' ? offset + limit : undefined);
+  }
+  return next;
+};
+
+const computeTaskStats = (tasks: Task[]): TaskStats => {
+  const completed = tasks.filter((task) => task.status === 'completed').length;
+  const total = tasks.length;
+  return {
+    total,
+    completed,
+    pending: total - completed,
+    critical: tasks.filter((task) => task.priority === 'critical' && task.status !== 'completed').length,
+    completionRate: total ? (completed / total) * 100 : 0,
+  };
+};
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -14,13 +64,18 @@ export const useTasks = () => {
     limit?: number;
     offset?: number;
   }) => {
+    const local = readLocalTasks();
+    setTasks(applyTaskFilters(local, filters));
     try {
       setLoading(true);
       setError(null);
       const response = await taskService.getTasks(filters);
-      setTasks(response.data || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch tasks');
+      if (!local.length && (response.data || []).length) {
+        writeLocalTasks(response.data || []);
+        setTasks(applyTaskFilters(response.data || [], filters));
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to fetch tasks');
       console.error('Error fetching tasks:', err);
     } finally {
       setLoading(false);
@@ -30,9 +85,9 @@ export const useTasks = () => {
   // Fetch task statistics
   const fetchStats = useCallback(async () => {
     try {
-      const statsData = await taskService.getTaskStats();
-      setStats(statsData);
-    } catch (err: any) {
+      const local = readLocalTasks();
+      setStats(computeTaskStats(local));
+    } catch (err: unknown) {
       console.error('Error fetching task stats:', err);
     }
   }, []);
@@ -45,36 +100,31 @@ export const useTasks = () => {
     status?: 'pending' | 'in_progress' | 'completed';
     dueDate?: string;
   }) => {
-    // Generate a temporary ID for optimistic update
-    const tempId = `temp-${Date.now()}`;
-    const optimisticTask: Task = {
-      id: tempId,
-      userId: 'pending',
-      title: taskData.title,
-      description: taskData.description,
-      priority: taskData.priority || 'low',
-      status: taskData.status || 'pending',
-      dueDate: taskData.dueDate,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
     try {
-      console.log('useTasks createTask (optimistic) called');
-      // Optimistically update the UI
-      setTasks(prev => [optimisticTask, ...prev]);
-
-      const newTask = await taskService.createTask(taskData);
-
-      // Replace the optimistic task with the real one from the server
-      setTasks(prev => prev.map(t => t.id === tempId ? newTask : t));
+      const nowIso = new Date().toISOString();
+      const optimisticTask = createLocalFirst(
+        'tasks',
+        {
+          userId: 'local-user',
+          title: taskData.title,
+          description: taskData.description,
+          priority: taskData.priority || 'low',
+          status: taskData.status || 'pending',
+          dueDate: taskData.dueDate,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        },
+        (payload) => {
+          const next = [payload as Task, ...readLocalTasks()];
+          writeLocalTasks(next);
+          setTasks(next);
+        }
+      ) as Task;
       await fetchStats();
-      return newTask;
-    } catch (err: any) {
+      return optimisticTask;
+    } catch (err: unknown) {
       console.error('Error in useTasks createTask:', err);
-      // Revert optimistic update on failure
-      setTasks(prev => prev.filter(t => t.id !== tempId));
-      setError(err.message || 'Failed to create task');
+      setError(getErrorMessage(err) || 'Failed to create task');
       throw err;
     }
   }, [fetchStats]);
@@ -82,81 +132,65 @@ export const useTasks = () => {
   // Update a task
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
     try {
-      setLoading(true);
       setError(null);
-      const updatedTask = await taskService.updateTask(id, updates);
-      setTasks(prev => prev.map(task =>
-        task.id === id ? updatedTask : task
-      ));
+      let updatedTask: Task | undefined;
+      updateLocalFirst('tasks', id, updates, (entityId, patch) => {
+        const next = readLocalTasks().map((task) => {
+          if (task.id !== entityId) return task;
+          updatedTask = { ...task, ...(patch as Partial<Task>), updatedAt: new Date().toISOString() };
+          return updatedTask;
+        });
+        writeLocalTasks(next);
+        setTasks(next);
+      });
       await fetchStats(); // Refresh stats
-      return updatedTask;
-    } catch (err: any) {
-      setError(err.message || 'Failed to update task');
+      return updatedTask as Task;
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to update task');
       throw err;
-    } finally {
-      setLoading(false);
     }
   }, [fetchStats]);
 
   // Toggle task status (pending <-> completed)
   const toggleTaskStatus = useCallback(async (id: string) => {
-    let originalTasks: Task[] = [];
-
     try {
-      console.log('useTasks toggleTaskStatus (optimistic) called for:', id);
-      setTasks(prev => {
-        originalTasks = prev;
-        return prev.map(task => {
-          if (task.id === id) {
-            const newStatus = task.status === 'completed' ? 'pending' : 'completed';
-            return {
-              ...task,
-              status: newStatus,
-              updatedAt: new Date().toISOString()
-            };
-          }
-          return task;
+      let updatedTask: Task | undefined;
+      const local = readLocalTasks();
+      const target = local.find((task) => task.id === id);
+      if (!target) {
+        throw new Error('Task not found');
+      }
+      const nextStatus = target.status === 'completed' ? 'pending' : 'completed';
+      updateLocalFirst('tasks', id, { status: nextStatus }, (entityId, patch) => {
+        const next = readLocalTasks().map((task) => {
+          if (task.id !== entityId) return task;
+          updatedTask = { ...task, ...(patch as Partial<Task>), updatedAt: new Date().toISOString() };
+          return updatedTask;
         });
+        writeLocalTasks(next);
+        setTasks(next);
       });
-
-      const updatedTask = await taskService.toggleTaskStatus(id);
-
-      // Update with the definitive server version
-      setTasks(prev => prev.map(task =>
-        task.id === id ? updatedTask : task
-      ));
       await fetchStats();
-      return updatedTask;
-    } catch (err: any) {
+      return updatedTask as Task;
+    } catch (err: unknown) {
       console.error('Error in useTasks toggleTaskStatus:', err);
-      // Revert to original state on failure
-      setTasks(originalTasks);
-      setError(err.message || 'Failed to toggle task status');
+      setError(getErrorMessage(err) || 'Failed to toggle task status');
       throw err;
     }
   }, [fetchStats]);
 
   // Delete a task
   const deleteTask = useCallback(async (id: string) => {
-    // Store task to revert if needed
-    let deletedTask: Task | undefined;
-
     try {
-      setTasks(prev => {
-        const index = prev.findIndex(t => t.id === id);
-        if (index !== -1) deletedTask = prev[index];
-        return prev.filter(task => task.id !== id);
+      deleteLocalFirst('tasks', id, (entityId) => {
+        const next = readLocalTasks().filter((task) => task.id !== entityId);
+        writeLocalTasks(next);
+        setTasks(next);
       });
-
-      await taskService.deleteTask(id);
       await fetchStats();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in useTasks deleteTask:', err);
-      // Revert optimistic deletion on failure
-      if (deletedTask) {
-        setTasks(prev => [deletedTask!, ...prev]); // Simple revert
-      }
-      setError(err.message || 'Failed to delete task');
+      setError(getErrorMessage(err) || 'Failed to delete task');
       throw err;
     }
   }, [fetchStats]);
@@ -166,28 +200,32 @@ export const useTasks = () => {
     try {
       console.log('useTasks clearAllTasks (optimistic) called for:', ids.length, 'tasks');
       // Single optimistic update for the whole batch
-      setTasks(prev => prev.filter(task => !ids.includes(task.id)));
-
-      // Fire all API calls in parallel
-      await Promise.all(ids.map(id => taskService.deleteTask(id)));
+      ids.forEach((id) => {
+        deleteLocalFirst('tasks', id, (entityId) => {
+          const next = readLocalTasks().filter((task) => task.id !== entityId);
+          writeLocalTasks(next);
+          setTasks(next);
+        });
+      });
 
       // Single stats refresh
       await fetchStats();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in useTasks clearAllTasks:', err);
-      // Fallback: fetch tasks from scratch on failure to sync
-      await fetchTasks();
-      setError(err.message || 'Failed to clear some tasks');
+      setError(getErrorMessage(err) || 'Failed to clear some tasks');
       throw err;
     }
-  }, [fetchStats, fetchTasks]);
+  }, [fetchStats]);
 
   // Get a single task
   const getTask = useCallback(async (id: string) => {
     try {
+      const local = readLocalTasks();
+      const found = local.find((task) => task.id === id);
+      if (found) return found;
       return await taskService.getTask(id);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch task');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to fetch task');
       throw err;
     }
   }, []);

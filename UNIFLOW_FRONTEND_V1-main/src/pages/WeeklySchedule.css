@@ -1767,3 +1767,176 @@ body.weekly-schedule-white ion-page {
     font-size: 16px !important;
   }
 }
+
+/* Large desktop/tv-ish screens: expand layout and scale labels */
+@media (min-width: 1200px) {
+  .weekly-schedule-panel {
+    width: min(calc(100vw - 72px), 1600px);
+    max-width: none;
+    margin: 14px auto 40px;
+    padding: clamp(26px, 2vw, 40px);
+    border-radius: 28px;
+  }
+
+  .schedule-grid {
+    width: 100%;
+    max-width: none;
+    height: clamp(700px, 80vh, 960px);
+    grid-template-columns: clamp(126px, 9.5vw, 172px) repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(6, minmax(0, 1fr)) clamp(88px, 10vh, 124px);
+    gap: clamp(12px, 1vw, 20px);
+    padding: clamp(14px, 1.2vw, 22px);
+  }
+
+  .day-header,
+  .time-header,
+  .corner-cell {
+    padding: 10px;
+  }
+
+  .day-text,
+  .time-text {
+    font-size: clamp(17px, 1.2vw, 24px);
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+  }
+
+  .corner-text-vertical,
+  .corner-text-horizontal {
+    font-size: clamp(15px, 1vw, 20px) !important;
+    line-height: 1.1 !important;
+  }
+
+  .weekly-schedule-screen .course-code,
+  .schedule-cell .course-code,
+  .weekly-schedule-screen .schedule-cell .course-code {
+    font-size: clamp(18px, 1.3vw, 25px) !important;
+  }
+}
+
+@media (min-width: 1600px) {
+  .weekly-schedule-panel {
+    width: min(calc(100vw - 96px), 1720px);
+    padding: 34px 42px 44px;
+  }
+
+  .schedule-grid {
+    height: clamp(760px, 82vh, 1040px);
+    grid-template-columns: clamp(138px, 9.5vw, 182px) repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Unify schedule header/corner greens across all breakpoints */
+.weekly-schedule-screen {
+  --ws-light-green-rgb: 143, 175, 158;
+}
+
+.weekly-schedule-screen .day-header,
+.weekly-schedule-screen .time-header,
+.weekly-schedule-screen .corner-cell {
+  background: rgba(var(--ws-light-green-rgb), 0.92) !important;
+}
+
+.weekly-schedule-screen .day-header.current-day-header {
+  background: rgba(var(--ws-light-green-rgb), 0.98) !important;
+}
+
+.weekly-schedule-screen .time-header.editable-time {
+  background: rgba(var(--ws-light-green-rgb), 0.55) !important;
+  border: 2px dashed rgba(20, 38, 28, 0.38) !important;
+}
+
+.weekly-schedule-screen .time-header.editable-time:hover {
+  background: rgba(var(--ws-light-green-rgb), 0.95) !important;
+  border-color: rgba(20, 38, 28, 0.52) !important;
+}
+
+/* Final corner-cell + header color lock:
+   keep phone green tone on large screens and render clean diagonal halves */
+.weekly-schedule-screen .day-header,
+.weekly-schedule-screen .time-header,
+.weekly-schedule-screen .corner-cell {
+  background: rgba(var(--ws-green-rgb), 0.45) !important;
+}
+
+.weekly-schedule-screen .day-header.current-day-header {
+  background: rgba(var(--ws-green-rgb), 0.6) !important;
+  border-color: var(--ws-green) !important;
+}
+
+.weekly-schedule-screen .time-header.editable-time {
+  background: rgba(var(--ws-green-rgb), 0.2) !important;
+  border-color: rgba(var(--ws-green-rgb), 0.45) !important;
+}
+
+.weekly-schedule-screen .time-header.editable-time:hover {
+  background: rgba(var(--ws-green-rgb), 0.35) !important;
+  border-color: rgba(var(--ws-green-rgb), 0.65) !important;
+}
+
+.weekly-schedule-screen .corner-cell {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Disable old diagonal line overlay from legacy rules */
+.weekly-schedule-screen .corner-content::before {
+  content: none !important;
+}
+
+/* Two true triangular halves */
+.weekly-schedule-screen .corner-cell::before,
+.weekly-schedule-screen .corner-cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.weekly-schedule-screen .corner-cell::before {
+  background: rgba(var(--ws-green-rgb), 0.62);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.weekly-schedule-screen .corner-cell::after {
+  background: rgba(var(--ws-green-rgb), 0.3);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.weekly-schedule-screen .corner-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.weekly-schedule-screen .corner-text-vertical,
+.weekly-schedule-screen .corner-text-horizontal {
+  position: absolute !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  transform: none !important;
+  margin: 0 !important;
+  color: #122319 !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.01em;
+}
+
+/* Time on upper-right triangle */
+.weekly-schedule-screen .corner-text-vertical {
+  top: 8px !important;
+  left: 10px !important;
+  right: auto !important;
+  bottom: auto !important;
+  font-size: clamp(13px, 1.2vw, 20px) !important;
+}
+
+/* Date on lower-left triangle */
+.weekly-schedule-screen .corner-text-horizontal {
+  right: 10px !important;
+  left: auto !important;
+  bottom: 8px !important;
+  top: auto !important;
+  font-size: clamp(13px, 1.2vw, 20px) !important;
+}

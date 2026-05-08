@@ -5,13 +5,13 @@ import { useAuth } from '../contexts/AuthContext';
 import BottomNavigation from '../components/BottomNavigation';
 import GlassyTimePicker from '../components/GlassyTimePicker';
 import { useTasks } from '../hooks/useTasks';
+import { useEvents } from '../hooks/useEvents';
 import { useStreak, readLongestStreak } from '../hooks/useStreak';
 import { useProductivityScore } from '../hooks/useProductivityScore';
 import { useProfile } from '../hooks/useProfile';
 import { useTranslation } from 'react-i18next';
 import { getCurrentWeekFocusSessions } from '../utils/focusSessionAnalytics';
 import { NotificationService } from '../services/NotificationService';
-import { api } from '../api/client';
 import './Home.css';
 
 type HomeLocationState = {
@@ -23,7 +23,7 @@ const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation<HomeLocationState>();
   const { user, logoutWithConfirmation, refreshUser } = useAuth();
-  const streak = useStreak();
+  const streak = useStreak({ trackActivity: false });
   const productivityScore = useProductivityScore();
   const { profile } = useProfile();
   const showStreak = profile?.preferences?.streakCount ?? true;
@@ -75,6 +75,11 @@ const Home: React.FC = () => {
     clearAllTasks: clearAllBackendTasks,
     toggleTaskStatus: toggleBackendTaskStatus
   } = useTasks();
+  const {
+    events,
+    createEvent: createBackendEvent,
+    deleteEvent: deleteBackendEvent,
+  } = useEvents();
 
   // UI Enhancement states
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -91,37 +96,6 @@ const Home: React.FC = () => {
   const [eventTime, setEventTime] = useState('');
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [events, setEvents] = useState<Array<{
-    id: string;
-    title: string;
-    time: string;
-    date: string;
-    completed?: boolean;
-  }>>(() => {
-    try {
-      const raw = localStorage.getItem('uniflow_events');
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-  });
-
-
-  // Persist events to localStorage so the Overview page can read them
-  useEffect(() => {
-    localStorage.setItem('uniflow_events', JSON.stringify(events));
-    try {
-      window.dispatchEvent(new Event('uniflow_events_updated'));
-    } catch {
-      // noop
-    }
-  }, [events]);
-
-  useEffect(() => {
-    setEvents((current) => {
-      const upcoming = current.filter((event) => !isPastCalendarDate(parseEventDate(event.date)));
-      return upcoming.length === current.length ? current : upcoming;
-    });
-  }, [currentTime]);
-
   // Task states
   const [showTaskPopup, setShowTaskPopup] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
@@ -169,19 +143,6 @@ const Home: React.FC = () => {
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
-
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        const response = await api.get('/events/');
-        setEvents(Array.isArray(response?.events) ? response.events : []);
-      } catch (error) {
-        console.error('Failed to load events from API. Falling back to local cache:', error);
-      }
-    };
-
-    loadEvents();
-  }, []);
 
   useEffect(() => {
     const state = location.state as HomeLocationState | null;
@@ -255,13 +216,10 @@ const Home: React.FC = () => {
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    const previousEvents = events;
-    setEvents(events.filter(event => event.id !== eventId));
     try {
-      await api.delete(`/events/${eventId}`);
+      await deleteBackendEvent(eventId);
     } catch (error) {
-      console.error('Failed to delete event from API:', error);
-      setEvents(previousEvents);
+      console.error('Failed to delete event:', error);
     }
   };
 
@@ -392,7 +350,7 @@ const Home: React.FC = () => {
   }, [events]);
 
   const completedTodayEventsCount = useMemo(() => {
-    return todayEvents.filter((event) => !!event.completed).length;
+    return todayEvents.filter((event) => !!(event as any).completed).length;
   }, [todayEvents]);
 
   const totalTodayActivityCount = todayTasks.length + todayEvents.length;
@@ -526,29 +484,14 @@ const Home: React.FC = () => {
       const dateIso = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
         .toISOString()
         .slice(0, 10);
-      const tempId = `temp-${Date.now()}`;
-      const optimisticEvent = {
-        id: tempId,
-        title: eventTitle,
-        time: eventTime,
-        date: dateIso,
-        priority: 'low' as const
-      };
-      setEvents((current) => [...current, optimisticEvent]);
-
-      api
-        .post('/events/', {
+      createBackendEvent({
           title: eventTitle,
           time: eventTime,
           date: dateIso,
           priority: 'low'
         })
-        .then((createdEvent) => {
-          setEvents((current) => current.map((event) => (event.id === tempId ? createdEvent : event)));
-        })
         .catch((error) => {
-          console.error('Failed to save event to API:', error);
-          setEvents((current) => current.filter((event) => event.id !== tempId));
+          console.error('Failed to save event:', error);
         });
 
       setShowEventModal(false);

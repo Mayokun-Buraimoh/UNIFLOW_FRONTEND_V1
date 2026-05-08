@@ -5,6 +5,7 @@ const STREAK_DATE_KEY = 'uniflow_streak_date';   // last day the streak was coun
 const STREAK_LONGEST_KEY = 'uniflow_streak_longest';
 const SESSION_START_KEY = 'uniflow_session_start'; // when today's active session started
 const REQUIRED_MS = 5 * 60 * 1000; // 5 minutes
+export const STREAK_UPDATED_EVENT = 'uniflow_streak_updated';
 
 function getTodayString() {
     return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
@@ -42,7 +43,12 @@ function writeLongestIfHigher(currentStreak: number) {
     }
 }
 
-export function useStreak() {
+type UseStreakOptions = {
+    trackActivity?: boolean;
+};
+
+export function useStreak(options: UseStreakOptions = {}) {
+    const { trackActivity = true } = options;
     const [streak, setStreak] = useState<number>(loadStreak);
     // Tracks how many ms the user has been active today
     const accumulatedMs = useRef<number>(0);
@@ -61,18 +67,28 @@ export function useStreak() {
         const cur = loadStreak();
         writeLongestIfHigher(cur);
 
-        // Restore accumulated time from this session if page was refreshed
-        const sessionStart = localStorage.getItem(SESSION_START_KEY);
-        if (sessionStart) {
-            const started = parseInt(sessionStart, 10);
-            if (!isNaN(started)) {
-                const today = getTodayString();
-                const startedDate = new Date(started).toISOString().slice(0, 10);
-                if (startedDate === today) {
-                    accumulatedMs.current = Date.now() - started;
+        if (trackActivity) {
+            // Restore accumulated time from this session if page was refreshed
+            const sessionStart = localStorage.getItem(SESSION_START_KEY);
+            if (sessionStart) {
+                const started = parseInt(sessionStart, 10);
+                if (!isNaN(started)) {
+                    const today = getTodayString();
+                    const startedDate = new Date(started).toISOString().slice(0, 10);
+                    if (startedDate === today) {
+                        accumulatedMs.current = Date.now() - started;
+                    }
                 }
             }
         }
+    }, [trackActivity]);
+
+    useEffect(() => {
+        const handleStreakUpdated = () => {
+            setStreak(loadStreak());
+        };
+        window.addEventListener(STREAK_UPDATED_EVENT, handleStreakUpdated);
+        return () => window.removeEventListener(STREAK_UPDATED_EVENT, handleStreakUpdated);
     }, []);
 
     const startCounting = useCallback(() => {
@@ -96,6 +112,7 @@ export function useStreak() {
                 writeLongestIfHigher(newStreak);
                 localStorage.setItem(STREAK_DATE_KEY, getTodayString());
                 setStreak(newStreak);
+                window.dispatchEvent(new Event(STREAK_UPDATED_EVENT));
 
                 // Stop the timer
                 if (timerRef.current) {
@@ -116,11 +133,16 @@ export function useStreak() {
 
     // Activity listeners — start/pause counting based on visibility & focus
     useEffect(() => {
+        if (!trackActivity) {
+            return;
+        }
+
         const lastActive = parseInt(localStorage.getItem('uniflow_last_active_time') || '0', 10);
         if (lastActive > 0 && Date.now() - lastActive > 25 * 60 * 60 * 1000) {
             localStorage.setItem(STREAK_KEY, '0');
             localStorage.removeItem(STREAK_DATE_KEY);
             setStreak(0);
+            window.dispatchEvent(new Event(STREAK_UPDATED_EVENT));
         }
 
         const handleVisible = () => {
@@ -150,7 +172,7 @@ export function useStreak() {
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [startCounting, pauseCounting]);
+    }, [startCounting, pauseCounting, trackActivity]);
 
     return streak;
 }

@@ -1,5 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { eventService, Event } from '../api/services';
+import { createLocalFirst, deleteLocalFirst, updateLocalFirst } from '../localfirst/syncQueue';
+
+const EVENT_STORAGE_KEY = 'uniflow_events';
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Unexpected error';
+
+const readLocalEvents = (): Event[] => {
+  try {
+    const raw = localStorage.getItem(EVENT_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeLocalEvents = (events: Event[]) => {
+  localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(events));
+};
 
 export const useEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -8,13 +27,20 @@ export const useEvents = () => {
 
   // Fetch events with optional date filter
   const fetchEvents = useCallback(async (filters?: { date?: string }) => {
+    const local = readLocalEvents();
+    const localFiltered = filters?.date ? local.filter((e) => e.date === filters.date) : local;
+    setEvents(localFiltered);
     try {
       setLoading(true);
       setError(null);
       const response = await eventService.getEvents(filters);
-      setEvents(response.events || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch events');
+      const remote = response.events || [];
+      if (!local.length && remote.length) {
+        writeLocalEvents(remote);
+        setEvents(filters?.date ? remote.filter((e) => e.date === filters.date) : remote);
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to fetch events');
       console.error('Error fetching events:', err);
     } finally {
       setLoading(false);
@@ -28,33 +54,29 @@ export const useEvents = () => {
     date: string;
     priority?: 'low' | 'medium' | 'critical';
   }) => {
-    // Generate a temporary ID for optimistic update
-    const tempId = `temp-${Date.now()}`;
-    const optimisticEvent: Event = {
-      id: tempId,
-      userId: 'pending',
-      title: eventData.title,
-      time: eventData.time,
-      date: eventData.date,
-      priority: eventData.priority || 'low',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
     try {
-      // Optimistically update the UI
-      setEvents(prev => [...prev, optimisticEvent]);
-
-      const newEvent = await eventService.createEvent(eventData);
-
-      // Replace the optimistic event with the real one from the server
-      setEvents(prev => prev.map(e => e.id === tempId ? newEvent : e));
-      return newEvent;
-    } catch (err: any) {
+      const nowIso = new Date().toISOString();
+      const optimisticEvent = createLocalFirst(
+        'events',
+        {
+          userId: 'local-user',
+          title: eventData.title,
+          time: eventData.time,
+          date: eventData.date,
+          priority: eventData.priority || 'low',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        },
+        (payload) => {
+          const next = [...readLocalEvents(), payload as Event];
+          writeLocalEvents(next);
+          setEvents(next);
+        }
+      ) as Event;
+      return optimisticEvent;
+    } catch (err: unknown) {
       console.error('Error in useEvents createEvent:', err);
-      // Revert optimistic update on failure
-      setEvents(prev => prev.filter(e => e.id !== tempId));
-      setError(err.message || 'Failed to create event');
+      setError(getErrorMessage(err) || 'Failed to create event');
       throw err;
     }
   }, []);
@@ -62,40 +84,35 @@ export const useEvents = () => {
   // Update an event
   const updateEvent = useCallback(async (id: string, updates: Partial<Event>) => {
     try {
-      setLoading(true);
       setError(null);
-      const updatedEvent = await eventService.updateEvent(id, updates);
-      setEvents(prev => prev.map(event =>
-        event.id === id ? updatedEvent : event
-      ));
-      return updatedEvent;
-    } catch (err: any) {
-      setError(err.message || 'Failed to update event');
+      let updatedEvent: Event | undefined;
+      updateLocalFirst('events', id, updates, (entityId, patch) => {
+        const next = readLocalEvents().map((event) => {
+          if (event.id !== entityId) return event;
+          updatedEvent = { ...event, ...(patch as Partial<Event>), updatedAt: new Date().toISOString() };
+          return updatedEvent;
+        });
+        writeLocalEvents(next);
+        setEvents(next);
+      });
+      return updatedEvent as Event;
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to update event');
       throw err;
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   // Delete an event
   const deleteEvent = useCallback(async (id: string) => {
-    let deletedEvent: Event | undefined;
-
     try {
-      setEvents(prev => {
-        const index = prev.findIndex(e => e.id === id);
-        if (index !== -1) deletedEvent = prev[index];
-        return prev.filter(event => event.id !== id);
+      deleteLocalFirst('events', id, (entityId) => {
+        const next = readLocalEvents().filter((event) => event.id !== entityId);
+        writeLocalEvents(next);
+        setEvents(next);
       });
-
-      await eventService.deleteEvent(id);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in useEvents deleteEvent:', err);
-      // Revert optimistic deletion
-      if (deletedEvent) {
-        setEvents(prev => [...prev, deletedEvent!]); 
-      }
-      setError(err.message || 'Failed to delete event');
+      setError(getErrorMessage(err) || 'Failed to delete event');
       throw err;
     }
   }, []);
@@ -104,8 +121,8 @@ export const useEvents = () => {
   const getEvent = useCallback(async (id: string) => {
     try {
       return await eventService.getEvent(id);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch event');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to fetch event');
       throw err;
     }
   }, []);

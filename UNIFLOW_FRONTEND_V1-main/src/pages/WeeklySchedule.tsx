@@ -12,6 +12,7 @@ import {
   timeSlotStartMinutesForSort,
   parseTimeSlotRangeMinutes,
 } from '../utils/weeklyScheduleTime';
+import { updateLocalFirst } from '../localfirst/syncQueue';
 
 const WeeklySchedule: React.FC = () => {
   const history = useHistory();
@@ -216,10 +217,14 @@ const WeeklySchedule: React.FC = () => {
         } catch(e) {}
       }
 
-      // Persist to backend (fire-and-forget)
-      try {
-        scheduleService.saveMySchedule(newScheduleData).catch(() => {});
-      } catch {}
+      updateLocalFirst(
+        'schedule',
+        'primary',
+        newScheduleData,
+        (_id, payload) => {
+          localStorage.setItem('weeklySchedule', JSON.stringify(payload));
+        }
+      );
       // Notify other parts of the app in this tab that schedule changed
       try {
         window.dispatchEvent(new Event('weeklyScheduleUpdated'));
@@ -313,7 +318,37 @@ const WeeklySchedule: React.FC = () => {
   // Load saved schedule on component mount (prefer backend, fallback to localStorage)
   React.useEffect(() => {
     let mounted = true;
+    const hydrateFromLocalStorage = () => {
+      const savedSchedule = localStorage.getItem('weeklySchedule');
+      if (mounted && savedSchedule) {
+        try {
+          const data = JSON.parse(savedSchedule);
+          setScheduleData({
+            Mon: data.Mon || [],
+            Tue: data.Tue || [],
+            Wed: data.Wed || [],
+            Thur: data.Thur || [],
+            Fri: data.Fri || [],
+          });
+        } catch (error) {
+          console.error('Error loading saved schedule:', error);
+        }
+      }
+
+      const savedVenues = localStorage.getItem('weeklyScheduleVenues');
+      if (mounted && savedVenues) {
+        try {
+          setVenuesData(JSON.parse(savedVenues));
+        } catch (e) {
+          console.warn('Failed to parse venues', e);
+        }
+      }
+    };
+
     const load = async () => {
+      // Hydrate instantly from local cache for snappy UI, then sync from backend.
+      hydrateFromLocalStorage();
+
       try {
         const apiSchedule = await scheduleService.getMySchedule();
         if (mounted && apiSchedule?.data) {
@@ -331,21 +366,8 @@ const WeeklySchedule: React.FC = () => {
       } catch (e) {
         console.warn('WeeklySchedule: backend not available, using localStorage');
       }
-      const savedSchedule = localStorage.getItem('weeklySchedule');
-      if (mounted && savedSchedule) {
-        try {
-          const data = JSON.parse(savedSchedule);
-          setScheduleData({
-            Mon: data.Mon || [],
-            Tue: data.Tue || [],
-            Wed: data.Wed || [],
-            Thur: data.Thur || [],
-            Fri: data.Fri || [],
-          });
-        } catch (error) {
-          console.error('Error loading saved schedule:', error);
-        }
-      } else if (mounted) {
+
+      if (!localStorage.getItem('weeklySchedule') && mounted) {
         // Empty state for first time
         setScheduleData({
           Mon: [...emptyDay],
@@ -354,15 +376,6 @@ const WeeklySchedule: React.FC = () => {
           Thur: [...emptyDay],
           Fri: [...emptyDay],
         });
-      }
-
-      const savedVenues = localStorage.getItem('weeklyScheduleVenues');
-      if (mounted && savedVenues) {
-        try {
-          setVenuesData(JSON.parse(savedVenues));
-        } catch (e) {
-          console.warn('Failed to parse venues', e);
-        }
       }
     };
     load();
@@ -472,20 +485,21 @@ const WeeklySchedule: React.FC = () => {
                     currentTimeInMinutes < endTimeInMinutes;
                   
                   const isCurrentDay = selectedView === 'day' && day === currentDay;
+                  const hasLiveClassNow = isCurrentTime && hasCourse;
                   
                   return (
                     <div 
                       key={`${day}-${timeIndex}-${courseCode || 'empty'}`} 
-                      className={`schedule-cell ${hasCourse ? 'schedule-cell--filled' : 'schedule-cell--empty'} ${isEditMode ? 'editable' : ''} ${isCurrentTime ? 'current-time' : ''} ${isCurrentDay ? 'current-day' : ''}`}
+                      className={`schedule-cell ${hasCourse ? 'schedule-cell--filled' : 'schedule-cell--empty'} ${isEditMode ? 'editable' : ''} ${hasLiveClassNow ? 'current-time' : ''} ${isCurrentDay ? 'current-day' : ''}`}
                       onClick={() => handleCellClick(day, timeIndex)}
                       style={{
                         ...(hasCourse ? { background: getCourseGradient(courseCode) } : {}),
-                        borderLeft: isCurrentTime ? '4px solid #2ecc71' : undefined,
+                        borderLeft: hasLiveClassNow ? '4px solid #2ecc71' : undefined,
                         border: selectedView === 'day' && day === currentDay ? '3px solid #2ecc71' : undefined
                       }}
                     >
                       <span className="course-code">{courseCode.trim()}</span>
-                      {isCurrentTime && (
+                      {hasLiveClassNow && (
                         <>
                           <div className="current-indicator"></div>
                           <div className="live-indicator">
@@ -502,7 +516,7 @@ const WeeklySchedule: React.FC = () => {
             <div className="corner-cell">
               <div className="corner-content">
                 <span className="corner-text-vertical">Time</span>
-                <span className="corner-text-horizontal">Days</span>
+                <span className="corner-text-horizontal">Date</span>
               </div>
             </div>
 

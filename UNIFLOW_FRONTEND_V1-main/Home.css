@@ -3389,6 +3389,17 @@ button.streak-icon:active {
     0 10px 24px rgba(46, 89, 65, 0.03);
 }
 
+.calendar-modal-content .modern-textarea,
+.calendar-modal-content .modern-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 24px rgba(34, 73, 53, 0.05);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+}
+
 .modern-modal-content .modern-textarea:focus,
 .modern-modal-content .modern-input:focus {
   background: rgba(255, 255, 255, 0.12);
@@ -3396,6 +3407,15 @@ button.streak-icon:active {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
     0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+.calendar-modal-content .modern-textarea:focus,
+.calendar-modal-content .modern-input:focus {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 0 4px rgba(255, 255, 255, 0.1);
 }
 
 .modern-modal-content .btn-secondary {
@@ -3633,4 +3653,135 @@ button.streak-icon:active {
   color: #ffffff;
   text-align: right;
   flex-shrink: 0;
+}
+
+/* Unified home layout scaling for large screens */
+:root {
+  --home-layout-max-width: 1440px;
+  --home-layout-gutter: 14px;
+  --home-section-gap: clamp(12px, 1.4vw, 24px);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --home-layout-gutter: 28px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --home-layout-gutter: 40px;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --home-layout-gutter: 56px;
+  }
+}
+
+.dashboard-header,
+.assignment-card,
+.metrics-grid,
+.tasks-section-container,
+.calendar-section-container,
+.overview-entry-container {
+  width: min(calc(100% - (2 * var(--home-layout-gutter))), var(--home-layout-max-width));
+  max-width: none;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--home-section-gap);
+  margin: 0 auto var(--home-section-gap);
+  padding: 0;
+}
+
+.tasks-section-container,
+.calendar-section-container {
+  padding: 0 !important;
+}
+
+.tasks-section-container {
+  margin: 0 auto var(--home-section-gap);
+}
+
+.calendar-section-container {
+  margin-bottom: var(--home-section-gap);
+}
+
+.tasks-section,
+.calendar-section {
+  margin: 0;
+}
+
+.metric-card {
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(72px, 8vw, 112px);
+  padding: clamp(14px, 1.6vw, 22px);
+}
+
+.metric-content h3 {
+  font-size: clamp(9px, 0.9vw, 13px);
+}
+
+.metric-content p {
+  font-size: clamp(14px, 1.2vw, 20px);
+}
+
+@media (min-width: 1280px) {
+  .metric-icon,
+  .metric-icon img {
+    width: 42px;
+    height: 42px;
+  }
+
+  .tasks-header h3,
+  .section-header h3 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Force glass styling for calendar event title input */
+.calendar-modal-content .event-form-section .input-group .modern-input {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.34) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 12px 24px rgba(24, 56, 39, 0.14) !important;
+  backdrop-filter: blur(20px) saturate(175%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(175%) !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.calendar-modal-content .event-form-section .input-group .modern-input:focus {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 4px rgba(255, 255, 255, 0.14) !important;
+}
+
+.calendar-modal-content .event-form-section .input-group .modern-input::placeholder {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.calendar-modal-content .event-form-section .input-group .modern-input:-webkit-autofill,
+.calendar-modal-content .event-form-section .input-group .modern-input:-webkit-autofill:hover,
+.calendar-modal-content .event-form-section .input-group .modern-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 1000px rgba(58, 84, 71, 0.42) inset !important;
+  transition: background-color 9999s ease-out 0s;
 }

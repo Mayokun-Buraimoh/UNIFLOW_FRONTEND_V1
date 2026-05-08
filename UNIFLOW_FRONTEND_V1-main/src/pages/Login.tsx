@@ -8,7 +8,7 @@ import { getDefaultStartPath } from '../utils/appPreferences';
 
 const Login: React.FC = () => {
   const history = useHistory();
-  const { login, error, clearError, adminBypass } = useAuth();
+  const { login, error, clearError } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -144,21 +144,6 @@ const Login: React.FC = () => {
               {loading ? 'Signing in...' : 'Sign In'}
             </IonButton>
 
-            {/* Admin Bypass Button */}
-            <IonButton
-              expand="block"
-              className="login-admin-bypass-button"
-              onClick={() => {
-                adminBypass();
-                setTimeout(() => {
-                  history.push(getDefaultStartPath());
-                }, 100);
-              }}
-              color="medium"
-              style={{ marginTop: '10px' }}
-            >
-              Admin Bypass (No Backend)
-            </IonButton>
           </div>
 
           {/* Toast for error messages */}

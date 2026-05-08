@@ -11,7 +11,6 @@ import DeleteAccountModal from '../components/DeleteAccountModal';
 import { useProfile, PROFILE_UPDATED_EVENT } from '../hooks/useProfile';
 import { writeStoredProfilePicture } from '../utils/profileLocalPicture';
 import { userService } from '../api/services';
-import { useSubscription } from '../contexts/SubscriptionContext';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
@@ -20,7 +19,6 @@ const Settings: React.FC = () => {
   const history = useHistory();
   const { user, logoutWithConfirmation, logout } = useAuth();
   const { profile, updateProfile: saveProfile } = useProfile();
-  const { currentPlanDetails } = useSubscription();
   const { t } = useTranslation();
 
   const [currentAvatar, setCurrentAvatar] = useState('/assets/icons/Avatars/default.jpg');
@@ -87,10 +85,6 @@ const Settings: React.FC = () => {
 
   const handleAppPreferences = () => {
     history.push('/app-preferences');
-  };
-
-  const handlePricing = () => {
-    history.push('/pricing');
   };
 
   const handleLogout = () => {
@@ -189,25 +183,6 @@ const Settings: React.FC = () => {
                   <div className="setting-content">
                     <h4 className="setting-title">{t('app_preferences')}</h4>
                     <p className="setting-description">Select your preferences.</p>
-                  </div>
-                  <div className="setting-arrow">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#666">
-                      <path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/>
-                    </svg>
-                  </div>
-                </div>
-
-                <div className="setting-item" onClick={handlePricing}>
-                  <div className="setting-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#4CAF50">
-                      <path d="M12,1L15.09,8.26L23,9.27L17,14.14L18.82,22L12,17.77L5.18,22L7,14.14L1,9.27L8.91,8.26L12,1M12,4.15L10.12,8.56L5.32,9.17L8.96,12.13L7.84,16.8L12,14.28L16.16,16.8L15.04,12.13L18.68,9.17L13.88,8.56L12,4.15Z" />
-                    </svg>
-                  </div>
-                  <div className="setting-content">
-                    <h4 className="setting-title">Pricing</h4>
-                    <p className="setting-description">
-                      {currentPlanDetails.name} plan · {currentPlanDetails.priceLabel}
-                    </p>
                   </div>
                   <div className="setting-arrow">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="#666">

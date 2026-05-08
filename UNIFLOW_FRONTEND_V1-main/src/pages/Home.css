@@ -3574,25 +3574,25 @@ button.streak-icon:active {
   -webkit-backdrop-filter: blur(22px) saturate(175%) !important;
 }
 
-/* Streak summary glass — readable forest greens (darker than glass tint) + soft highlight */
+/* Streak summary glass — white text for contrast */
 .streak-summary-modal {
   max-width: 380px;
 }
 
 .streak-summary-modal .modal-header h2 {
-  color: #1e3d2f !important;
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.45);
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .streak-summary-modal .modal-header p {
-  color: rgba(30, 61, 48, 0.92) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
   font-weight: 600 !important;
   letter-spacing: -0.01em;
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 .streak-summary-modal .close-btn {
-  color: #1e3d2f !important;
+  color: #ffffff !important;
 }
 
 .streak-summary-modal .close-btn svg {
@@ -3623,7 +3623,7 @@ button.streak-icon:active {
   align-items: baseline;
   gap: 16px;
   padding: 11px 0;
-  border-bottom: 1px solid rgba(30, 61, 48, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .streak-summary-row:last-of-type {
@@ -3632,15 +3632,187 @@ button.streak-icon:active {
 
 .streak-summary-label {
   font-size: 14px;
-  color: rgba(34, 66, 54, 0.9);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
 
 .streak-summary-value {
   font-size: 15px;
   font-weight: 600;
-  color: #1a3328;
+  color: #ffffff;
   text-align: right;
   flex-shrink: 0;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+/* Final home layout + calendar input overrides (active src/pages stylesheet) */
+:root {
+  --home-layout-max-width: 1440px;
+  --home-layout-gutter: 14px;
+  --home-section-gap: clamp(12px, 1.4vw, 24px);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --home-layout-gutter: 28px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --home-layout-gutter: 40px;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --home-layout-gutter: 56px;
+  }
+}
+
+.dashboard-header,
+.assignment-card,
+.metrics-grid,
+.tasks-section-container,
+.calendar-section-container,
+.overview-entry-container {
+  width: min(calc(100% - (2 * var(--home-layout-gutter))), var(--home-layout-max-width));
+  max-width: none;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--home-section-gap);
+  margin: 0 auto var(--home-section-gap);
+  padding: 0;
+}
+
+.tasks-section-container,
+.calendar-section-container {
+  padding: 0 !important;
+}
+
+.tasks-section-container {
+  margin: 0 auto var(--home-section-gap);
+}
+
+.calendar-section-container {
+  margin: 0 auto var(--home-section-gap);
+}
+
+.tasks-section,
+.calendar-section {
+  margin: 0;
+}
+
+.tasks-section {
+  width: 100%;
+  max-width: none;
+}
+
+.calendar-section {
+  width: 100%;
+  max-width: none;
+}
+
+.metric-card {
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(72px, 8vw, 112px);
+  padding: clamp(14px, 1.6vw, 22px);
+}
+
+.metric-content h3 {
+  font-size: clamp(9px, 0.9vw, 13px);
+}
+
+.metric-content p {
+  font-size: clamp(14px, 1.2vw, 20px);
+}
+
+@media (min-width: 1280px) {
+  .metric-icon,
+  .metric-icon img {
+    width: 42px;
+    height: 42px;
+  }
+
+  .tasks-header h3,
+  .section-header h3 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric-card {
+    min-height: 68px;
+    padding: 12px;
+  }
+
+  .metric-content h3 {
+    font-size: 8px;
+  }
+
+  .metric-content p {
+    font-size: 14px;
+  }
+}
+
+.calendar-modal-content .event-form-section .input-group .modern-input {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.34) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 12px 24px rgba(24, 56, 39, 0.14) !important;
+  backdrop-filter: blur(20px) saturate(175%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(175%) !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.calendar-modal-content .event-form-section .input-group .modern-input:focus {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 4px rgba(255, 255, 255, 0.14) !important;
+}
+
+.calendar-modal-content .event-form-section .input-group .modern-input::placeholder {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.calendar-modal-content .event-form-section .input-group .modern-input:-webkit-autofill,
+.calendar-modal-content .event-form-section .input-group .modern-input:-webkit-autofill:hover,
+.calendar-modal-content .event-form-section .input-group .modern-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 1000px rgba(58, 84, 71, 0.42) inset !important;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* iOS WebView caret stability: keep glass but reduce heavy composition on form modals */
+@supports (-webkit-touch-callout: none) {
+  .modern-modal-content,
+  .calendar-modal-content {
+    backdrop-filter: blur(14px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(150%) !important;
+    transform: none !important;
+  }
+
+  .modern-modal-content .modern-textarea,
+  .modern-modal-content .modern-input,
+  .calendar-modal-content .modern-textarea,
+  .calendar-modal-content .modern-input {
+    font-size: 16px !important;
+    transform: none !important;
+  }
 }

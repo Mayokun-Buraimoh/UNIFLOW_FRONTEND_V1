@@ -3,8 +3,8 @@ import { IonPage, IonContent, IonAlert } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import BackButton from '../components/BackButton';
-import { services } from '../api/services';
 import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStorage';
+import { createLocalFirst, deleteLocalFirst, updateLocalFirst } from '../localfirst/syncQueue';
 import './Courses.css';
 
 interface Course {
@@ -16,6 +16,7 @@ interface Course {
 }
 
 const THEMES = ['blue', 'green', 'red', 'purple'] as const;
+const MAX_COURSE_FOLDERS = 15;
 
 const Courses: React.FC = () => {
   const history = useHistory();
@@ -24,7 +25,7 @@ const Courses: React.FC = () => {
     if (savedCourses) {
       try {
         return JSON.parse(savedCourses);
-      } catch (err) {
+      } catch {
         return [];
       }
     }
@@ -52,6 +53,8 @@ const Courses: React.FC = () => {
   }, []);
   const [showAddPopover, setShowAddPopover] = useState(false);
   const [showNameAlert, setShowNameAlert] = useState(false);
+  const [showLimitAlert, setShowLimitAlert] = useState(false);
+  const [showDuplicateNameAlert, setShowDuplicateNameAlert] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -81,24 +84,10 @@ const Courses: React.FC = () => {
     if (!selectedCourse) return;
 
     const courseId = selectedCourse.id;
-    const token = localStorage.getItem('uniflow_token');
-
-    if (token) {
-      try {
-        await services.course.deleteCourse(courseId);
-      } catch (err) {
-        // If the delete on server failed, show a message and abort local deletion
-        console.error('Failed to delete course on server', err);
-        window.alert('Failed to delete course on server. Please try again.');
-        setShowOptionsPopup(false);
-        setSelectedCourse(null);
-        return;
-      }
-    }
-
-    // Remove locally in all cases (server deletion succeeded or no token)
-    setCourses(prev => prev.filter(c => c.id !== courseId));
-    try { localStorage.removeItem(`uniflow_files_${courseId}`); } catch (e) { /* ignore */ }
+    deleteLocalFirst('courses', courseId, (entityId) => {
+      setCourses((prev) => prev.filter((course) => course.id !== entityId));
+    });
+    try { localStorage.removeItem(`uniflow_files_${courseId}`); } catch { /* ignore */ }
     setSelectedCourse(null);
     setShowOptionsPopup(false);
   };
@@ -112,11 +101,31 @@ const Courses: React.FC = () => {
     }
   };
 
+  const normalizeCourseName = (name: string) => name.trim().toUpperCase();
+
+  const hasDuplicateCourseName = (name: string, excludeCourseId?: string) => {
+    const normalized = normalizeCourseName(name);
+    if (!normalized) return false;
+    return courses.some((course) => {
+      if (excludeCourseId && course.id === excludeCourseId) return false;
+      return normalizeCourseName(course.name) === normalized;
+    });
+  };
+
   const saveRenamedCourse = () => {
     if (editingCourseId && editingName.trim()) {
-      setCourses(courses.map(c =>
-        c.id === editingCourseId ? { ...c, name: editingName.toUpperCase() } : c
-      ));
+      if (hasDuplicateCourseName(editingName, editingCourseId)) {
+        setShowDuplicateNameAlert(true);
+        return;
+      }
+      const normalized = normalizeCourseName(editingName);
+      updateLocalFirst('courses', editingCourseId, { name: normalized }, (entityId, patch) => {
+        setCourses((prev) =>
+          prev.map((course) =>
+            course.id === entityId ? { ...course, ...(patch as Partial<Course>) } : course
+          )
+        );
+      });
     }
     setEditingCourseId(null);
   };
@@ -136,7 +145,7 @@ const Courses: React.FC = () => {
         const parsed = JSON.parse(savedFiles);
         if (Array.isArray(parsed)) return parsed.length;
       }
-    } catch (err) {
+    } catch {
       // Ignored
     }
     return 0;
@@ -147,6 +156,11 @@ const Courses: React.FC = () => {
   };
 
   const handleAddNewFolder = () => {
+    if (courses.length >= MAX_COURSE_FOLDERS) {
+      setShowAddPopover(false);
+      setShowLimitAlert(true);
+      return;
+    }
     setShowAddPopover(false);
     setShowNameAlert(true);
   };
@@ -154,48 +168,48 @@ const Courses: React.FC = () => {
   const createCourse = async (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const token = localStorage.getItem('uniflow_token');
+    if (hasDuplicateCourseName(trimmed)) {
+      setShowDuplicateNameAlert(true);
+      return;
+    }
+    if (courses.length >= MAX_COURSE_FOLDERS) {
+      setShowLimitAlert(true);
+      return;
+    }
     const lastOpened = new Date()
       .toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
       .replace(/\//g, '-');
-
-    if (token) {
-      try {
-        const resp: any = await services.course.createCourse({
-          name: trimmed.toUpperCase(),
-          code: trimmed.toUpperCase(),
-        });
-        const created = resp?.id ? resp : resp?.course ? resp.course : resp;
+    const normalized = normalizeCourseName(trimmed);
+    createLocalFirst(
+      'courses',
+      {
+        name: normalized,
+        notesCount: 0,
+        lastOpened,
+        colorTheme: THEMES[courses.length % THEMES.length],
+      },
+      (payload) => {
         setCourses((prev) => {
-          const newCourse: Course = {
-            id: String(created.id || Date.now()),
-            name: (created.name || trimmed).toUpperCase(),
+          if (prev.length >= MAX_COURSE_FOLDERS) return prev;
+          if (prev.some((course) => normalizeCourseName(course.name) === normalized)) return prev;
+          const optimistic: Course = {
+            id: String(payload.id),
+            name: normalized,
             notesCount: 0,
             lastOpened,
             colorTheme: THEMES[prev.length % THEMES.length],
           };
-          return [...prev, newCourse];
+          return [...prev, optimistic];
         });
-        return;
-      } catch (err) {
-        console.warn('Create course on server failed, falling back to local:', err);
       }
-    }
-
-    setCourses((prev) => {
-      const fallback: Course = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        name: trimmed.toUpperCase(),
-        notesCount: 0,
-        lastOpened,
-        colorTheme: THEMES[prev.length % THEMES.length],
-      };
-      return [...prev, fallback];
-    });
+    );
   };
 
   /** Same path Vite/Capacitor serve from `public/assets` */
-  const getFileIcon = (_theme: string) => '/assets/icons/new_folder_icon.png';
+  const getFileIcon = (theme: string) => {
+    void theme;
+    return '/assets/icons/new_folder_icon.png';
+  };
 
   return (
     <IonPage>
@@ -397,6 +411,10 @@ const Courses: React.FC = () => {
                   if (!title) {
                     return false;
                   }
+                  if (hasDuplicateCourseName(title)) {
+                    setShowDuplicateNameAlert(true);
+                    return false;
+                  }
                   if (createCourseSubmittingRef.current) {
                     return false;
                   }
@@ -407,6 +425,36 @@ const Courses: React.FC = () => {
                   });
                   return true;
                 },
+              },
+            ]}
+          />
+
+          <IonAlert
+            isOpen={showDuplicateNameAlert}
+            onDidDismiss={() => setShowDuplicateNameAlert(false)}
+            cssClass="custom-ui-alert custom-ui-alert-limit"
+            header="Duplicate name"
+            message="A course folder with this name already exists. Use a different name."
+            buttons={[
+              {
+                text: 'OK',
+                cssClass: 'alert-btn-create',
+                handler: () => setShowDuplicateNameAlert(false),
+              },
+            ]}
+          />
+
+          <IonAlert
+            isOpen={showLimitAlert}
+            onDidDismiss={() => setShowLimitAlert(false)}
+            cssClass="custom-ui-alert custom-ui-alert-limit"
+            header="Folder limit reached"
+            message={`You can create up to ${MAX_COURSE_FOLDERS} course folders.`}
+            buttons={[
+              {
+                text: 'OK',
+                cssClass: 'alert-btn-create',
+                handler: () => setShowLimitAlert(false),
               },
             ]}
           />
