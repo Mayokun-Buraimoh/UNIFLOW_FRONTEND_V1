@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 import './SignUp.css';
 
 const SignUp: React.FC = () => {
-  console.log('SignUp component rendering...');
   const history = useHistory();
   
   // Add error boundary for AuthContext
@@ -24,12 +23,10 @@ const SignUp: React.FC = () => {
     console.error('AuthContext error:', error);
     // Provide fallback functions
     signInWithApple = async () => {
-      console.log('Apple sign-in not available');
-      alert('Apple sign-in is currently unavailable. Please try again later.');
+      throw new Error('Apple sign-in is currently unavailable. Please try again later.');
     };
     signInWithGoogle = async () => {
-      console.log('Google sign-in not available');
-      alert('Google sign-in is currently unavailable. Please try again later.');
+      throw new Error('Google sign-in is currently unavailable. Please try again later.');
     };
     clearError = () => {};
     error = null;
@@ -82,7 +79,6 @@ const SignUp: React.FC = () => {
   };
 
   const handleEmailSignIn = (e?: React.MouseEvent) => {
-    console.log('handleEmailSignIn called');
     // Prevent any default behavior
     if (e) {
       e.preventDefault();
@@ -92,8 +88,7 @@ const SignUp: React.FC = () => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-    // Navigate to a login page or show email login form
-    console.log('Navigating to /login');
+    // Navigate to login page
     history.push('/login');
   };
 
@@ -102,8 +97,6 @@ const SignUp: React.FC = () => {
     history.push('/register');
   };
 
-  console.log('SignUp component about to render JSX...');
-  
   return (
     <IonPage>
       <IonContent fullscreen className="signup-screen">

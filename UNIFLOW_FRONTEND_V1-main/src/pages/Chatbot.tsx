@@ -7,7 +7,6 @@ import { useHistory } from "react-router-dom";
 import "./Chatbot.css";
 import { aiClient, ChatMessage, ChatHistory } from "../api/aiClient";
 import { useAuth } from "../contexts/AuthContext";
-import { useSwipeBack } from "../hooks/useSwipeBack";
 import BackButton from "../components/BackButton";
 
 interface Attachment {
@@ -120,10 +119,6 @@ export default function Chatbot() {
     }
   };
   
-  // Enable swipe to go back as long as the sidebar is not open
-
-  useSwipeBack(!isHistoryOpen);
-
   useEffect(() => {
     if (user?.id) {
       loadHistory();

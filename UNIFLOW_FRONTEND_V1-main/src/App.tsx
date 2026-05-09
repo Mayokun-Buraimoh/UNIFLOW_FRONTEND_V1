@@ -1,4 +1,4 @@
-import { Redirect, Route } from 'react-router-dom';
+import { Redirect, Route, useHistory, useLocation } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { useEffect } from 'react';
@@ -53,6 +53,66 @@ const StreakActivityTracker = () => {
   return null;
 };
 
+const GlobalLeftSwipeBack = () => {
+  const history = useHistory();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname === '/home') return;
+
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    const shouldIgnoreTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+      if (target.isContentEditable) return true;
+      return Boolean(target.closest('ion-alert, ion-modal, .modern-modal-overlay'));
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (shouldIgnoreTarget(event.target)) {
+        tracking = false;
+        return;
+      }
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      tracking = true;
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+
+      const endX = event.changedTouches[0].clientX;
+      const endY = event.changedTouches[0].clientY;
+      const dx = endX - startX;
+      const dy = endY - startY;
+
+      // Only left swipe triggers navigation.
+      if (dx > 0) return;
+      if (Math.abs(dx) < 90) return;
+      if (Math.abs(dx) <= Math.abs(dy) * 1.15) return;
+
+      if (history.length > 1) {
+        history.goBack();
+      }
+    };
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [history, location.pathname]);
+
+  return null;
+};
+
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
 
@@ -97,9 +157,10 @@ const App: React.FC = () => {
         <IonReactRouter>
           <AuthProvider>
             <StreakActivityTracker />
+            <GlobalLeftSwipeBack />
             <SubscriptionProvider>
               <PlanProvider>
-                <IonRouterOutlet>
+                <IonRouterOutlet swipeGesture={false}>
                 {/* Public Routes */}
                 <Route exact path="/splash">
                   <Splash />

@@ -8,24 +8,18 @@ import { clearUserScopedStorageIfUserChanged, readUserIdFromStorage } from '../u
 
 const GoogleCallback: React.FC = () => {
   const history = useHistory();
-  const { user, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const [status, setStatus] = useState('Completing sign in...');
-  
-  console.log('GoogleCallback component rendered');
 
   useEffect(() => {
-    console.log('GoogleCallback useEffect triggered');
     const handleGoogleCallback = async () => {
       try {
-        console.log('Current URL:', window.location.href);
         const url = new URL(window.location.href);
         const token = url.searchParams.get('token');
         const userParam = url.searchParams.get('user');
         const error = url.searchParams.get('error');
         const origin = url.searchParams.get('origin');
-        
-        console.log('URL params:', { token: !!token, userParam: !!userParam, error, origin });
-        
+
         // Handle OAuth cancellation
         if (error === 'oauth_cancelled') {
           setStatus('Sign-in cancelled. Redirecting...');
@@ -42,7 +36,6 @@ const GoogleCallback: React.FC = () => {
           
           const previousUserId = readUserIdFromStorage();
           // Clear any existing authentication first
-          console.log('Google OAuth: Clearing existing auth before setting new session');
           localStorage.removeItem('uniflow_token');
           localStorage.removeItem('uniflow_user');
           localStorage.removeItem('refreshToken');
@@ -53,24 +46,17 @@ const GoogleCallback: React.FC = () => {
           setStatus('Loading profile...');
           const userData = JSON.parse(decodeURIComponent(userParam));
           clearUserScopedStorageIfUserChanged(previousUserId, userData.id);
-          
-          console.log('Google OAuth raw user data:', userData);
-          console.log('Google OAuth user data type:', typeof userData);
-          console.log('Google OAuth user data keys:', Object.keys(userData));
-          
+
           // Store user data in localStorage for AuthContext
           localStorage.setItem('uniflow_user', JSON.stringify(userData));
-          
-          console.log('Google OAuth: User data stored in localStorage');
-          console.log('Google OAuth: Token stored:', !!token);
+
           setStatus('Success! Redirecting...');
           
           // Force refresh the user in AuthContext to ensure immediate authentication
           try {
             await refreshUser();
-            console.log('Google OAuth: User refreshed in AuthContext');
-          } catch (error) {
-            console.log('Google OAuth: refreshUser failed, but localStorage is set:', error);
+          } catch {
+            // localStorage auth data is already written; continue redirect flow
           }
           
           // Redirect to home page
@@ -95,9 +81,7 @@ const GoogleCallback: React.FC = () => {
     };
 
     handleGoogleCallback();
-  }, [history]);
-
-  console.log('GoogleCallback rendering with status:', status);
+  }, [history, refreshUser]);
   
   return (
     <IonPage>
@@ -113,8 +97,7 @@ const GoogleCallback: React.FC = () => {
           padding: '20px'
         }}>
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>{status}</div>
-          <div style={{ fontSize: '14px', color: '#666' }}>Debug: Component is rendering</div>
-          {status.includes('Loading') && (
+          {status.toLowerCase().includes('loading') && (
             <div style={{ 
               width: '40px', 
               height: '40px', 

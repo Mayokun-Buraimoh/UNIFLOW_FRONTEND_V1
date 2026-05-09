@@ -190,6 +190,14 @@
     line-height: 1.4;
 }
 
+.pd-linked-goal {
+    display: block;
+    margin-top: 2px;
+    color: #888;
+    font-size: 11px;
+    font-weight: 400;
+}
+
 .pd-item-meta {
     font-size: 10px;
     display: flex;
@@ -959,5 +967,146 @@
 
     .pd-goal-progress-header {
         align-items: center;
+    }
+}
+
+@media (min-width: 768px) {
+    .pd-content {
+        padding: 0 24px;
+    }
+
+    .pd-description {
+        max-width: 940px;
+        margin: 0 auto 16px;
+        font-size: 16px;
+        line-height: 1.45;
+    }
+
+    .pd-list {
+        max-width: 980px;
+        margin: 0 auto;
+        gap: 14px;
+    }
+
+    .pd-item {
+        gap: 14px;
+        padding: 18px 20px;
+        border-radius: 16px;
+        min-height: 88px;
+    }
+
+    .pd-checkbox {
+        width: 24px;
+        height: 24px;
+        border-radius: 7px;
+    }
+
+    .pd-check-mark {
+        font-size: 14px;
+    }
+
+    .pd-item-content {
+        gap: 12px;
+    }
+
+    .pd-item-text {
+        font-size: 18px;
+        line-height: 1.35;
+    }
+
+    .pd-linked-goal {
+        margin-top: 4px;
+        font-size: 14px;
+    }
+
+    .pd-item-meta {
+        font-size: 13px;
+        gap: 8px;
+    }
+
+    .pd-meta-freq {
+        padding: 6px 12px;
+        border-radius: 8px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .pd-content {
+        padding: 0 34px;
+    }
+
+    .pd-list {
+        max-width: 1120px;
+        gap: 16px;
+    }
+
+    .pd-item {
+        gap: 16px;
+        padding: 22px 24px;
+        border-radius: 18px;
+        min-height: 98px;
+    }
+
+    .pd-checkbox {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+    }
+
+    .pd-check-mark {
+        font-size: 16px;
+    }
+
+    .pd-item-text {
+        font-size: 20px;
+    }
+
+    .pd-linked-goal {
+        font-size: 15px;
+    }
+
+    .pd-item-meta {
+        font-size: 14px;
+    }
+
+    .pd-meta-freq {
+        padding: 7px 14px;
+        border-radius: 9px;
+    }
+
+    .pd-progress-tab-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .pd-analytics-grid {
+        gap: 14px;
+    }
+
+    .pd-metric-card {
+        border-radius: 14px;
+        padding: 18px;
+        gap: 16px;
+    }
+
+    .pd-metric-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        font-size: 26px;
+    }
+
+    .pd-metric-title {
+        font-size: 13px;
+    }
+
+    .pd-metric-value {
+        font-size: 28px;
+    }
+
+    .pd-metric-sub {
+        font-size: 12px;
     }
 }

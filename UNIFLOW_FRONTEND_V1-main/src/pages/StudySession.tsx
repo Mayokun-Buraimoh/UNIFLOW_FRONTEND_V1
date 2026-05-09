@@ -2,7 +2,6 @@ import { IonContent, IonPage, IonButton, IonToast } from '@ionic/react';
 import { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
-import { useSwipeBack } from '../hooks/useSwipeBack';
 import './StudySession.css';
 
 const StudySession: React.FC = () => {
@@ -19,9 +18,6 @@ const StudySession: React.FC = () => {
   const [tempInterval, setTempInterval] = useState('30:00');
   const [isTechniqueDropdownOpen, setIsTechniqueDropdownOpen] = useState(false);
   const [isNoteDropdownOpen, setIsNoteDropdownOpen] = useState(false);
-
-  // Enable swipe to go back unless the user is actively using a dropdown or editing time
-  useSwipeBack(!isTechniqueDropdownOpen && !isNoteDropdownOpen && !isEditingTotalTime && !isEditingInterval);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

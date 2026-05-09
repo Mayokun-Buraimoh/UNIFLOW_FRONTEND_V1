@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { useHistory, useParams } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
-import { useSwipeBack } from '../hooks/useSwipeBack';
 import { services } from '../api/services';
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
 import { getNoteReadingProgressPercent } from '../utils/noteReadingProgress';
@@ -46,9 +45,6 @@ const CourseDetail: React.FC = () => {
     const [editingLabelText, setEditingLabelText] = useState("");
     const lastTapRef = useRef<number>(0);
     const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Enables horizontal swipe back gesture on this page
-    useSwipeBack(!showUploadMenu);
 
     const loadCourseAndFiles = React.useCallback(() => {
         const savedCourses = localStorage.getItem('uniflow_courses');

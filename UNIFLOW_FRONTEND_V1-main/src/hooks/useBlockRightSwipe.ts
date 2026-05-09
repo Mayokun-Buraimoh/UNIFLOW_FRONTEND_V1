@@ -46,18 +46,13 @@ export function useBlockRightSwipe() {
             const dx = x - startX;
             const dy = y - startY;
 
-            const EDGE_THRESHOLD = 40; // Pixels from left edge allowed to swipe back
-
             // Check if it's a rightward swipe (dx > 0) and more horizontal than vertical
-            if (dx > 0 && Math.abs(dx) > Math.abs(dy)) {
-                // If it did NOT originate from the edge
-                if (startX > EDGE_THRESHOLD) {
-                    // Block the swipe IMMEDIATELY to prevent Ionic or browser from locking onto it
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    if (e.cancelable) {
-                        e.preventDefault();
-                    }
+            if (dx > 10 && Math.abs(dx) > Math.abs(dy)) {
+                // Block rightward horizontal drags everywhere, including left-edge starts.
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                if (e.cancelable) {
+                    e.preventDefault();
                 }
             }
         };

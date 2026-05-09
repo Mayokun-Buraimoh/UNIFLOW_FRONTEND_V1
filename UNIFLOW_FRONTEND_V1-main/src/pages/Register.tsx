@@ -109,7 +109,10 @@ const Register: React.FC = () => {
                <IonInput
                  type="text"
                  value={formData.name}
-                 onIonChange={(e) => handleInputChange('name', e.detail.value || '')}
+                 onIonInput={(e) => {
+                   const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
+                   handleInputChange('name', value);
+                 }}
                  placeholder="Full Name"
                  className="register-input"
                />
@@ -119,7 +122,10 @@ const Register: React.FC = () => {
                <IonInput
                  type="email"
                  value={formData.email}
-                 onIonChange={(e) => handleInputChange('email', e.detail.value || '')}
+                 onIonInput={(e) => {
+                   const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
+                   handleInputChange('email', value);
+                 }}
                  placeholder="Email"
                  className="register-input"
                />
@@ -129,7 +135,10 @@ const Register: React.FC = () => {
               <IonInput
                 type="password"
                 value={formData.password}
-                onIonChange={(e) => handleInputChange('password', e.detail.value || '')}
+                onIonInput={(e) => {
+                  const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
+                  handleInputChange('password', value);
+                }}
                 placeholder="Password"
                 className="register-input"
               />
@@ -139,7 +148,10 @@ const Register: React.FC = () => {
                <IonInput
                  type="password"
                  value={formData.confirmPassword}
-                 onIonChange={(e) => handleInputChange('confirmPassword', e.detail.value || '')}
+                 onIonInput={(e) => {
+                   const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
+                   handleInputChange('confirmPassword', value);
+                 }}
                  placeholder="Confirm Password"
                  className="register-input"
                />

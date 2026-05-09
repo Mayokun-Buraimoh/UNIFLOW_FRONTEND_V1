@@ -31,13 +31,14 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import BackButton from '../components/BackButton';
 import FocusSessionBreakOverlay from '../components/FocusSessionBreakOverlay';
+import FocusSessionPauseOverlay from '../components/FocusSessionPauseOverlay';
 import FocusSessionCompleteCelebration from '../components/FocusSessionCompleteCelebration';
 import './Chatbot.css';
 import './NoteDetail.css';
 import { saveFocusSessionRecord } from '../utils/focusSessionAnalytics';
 import {
   loadNoteReadingProgress,
-  saveNoteReadingProgressIfGreater,
+  saveNoteReadingProgress,
 } from '../utils/noteReadingProgress';
 import { NOTE_PDF_UPDATED_EVENT, setNotePdfDataInStorage } from '../utils/notePdfStorage';
 import { resolveDjangoAiOrigin } from '../constants/djangoAiPublic';
@@ -176,6 +177,7 @@ const NoteDetail: React.FC = () => {
   const [stickyDeleteConfirmId, setStickyDeleteConfirmId] = useState<string | null>(null);
   const stickyDeleteTargetRef = useRef<string | null>(null);
   const pdfViewerRef = useRef<HTMLDivElement | null>(null);
+  const hasRestoredReadingProgressRef = useRef(false);
   const dragStateRef = useRef<{
     noteId: string;
     type: 'drag' | 'resize';
@@ -712,7 +714,8 @@ const NoteDetail: React.FC = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      setContainerWidth(isPdfFullscreen ? window.innerWidth - 32 : window.innerWidth - 40);
+      const nextWidth = isPdfFullscreen ? window.innerWidth - 32 : window.innerWidth - 40;
+      setContainerWidth(nextWidth);
     };
 
     handleResize();
@@ -741,7 +744,7 @@ const NoteDetail: React.FC = () => {
         }
         const viewed = scrollTop + clientHeight;
         const pct = Math.min(100, (viewed / scrollHeight) * 100);
-        saveNoteReadingProgressIfGreater(id, pct);
+        saveNoteReadingProgress(id, pct);
       });
     };
 
@@ -758,8 +761,13 @@ const NoteDetail: React.FC = () => {
     if (activeSegment !== 'notes' || !pdfData || !numPages || !id) {
       return;
     }
-    const { maxPercent } = loadNoteReadingProgress(id);
-    if (maxPercent <= 0) {
+    if (hasRestoredReadingProgressRef.current) {
+      return;
+    }
+    hasRestoredReadingProgressRef.current = true;
+
+    const progress = loadNoteReadingProgress(id);
+    if (!progress.hasCurrentPercent || progress.currentPercent <= 0) {
       return;
     }
     const t = window.setTimeout(() => {
@@ -769,11 +777,16 @@ const NoteDetail: React.FC = () => {
       }
       const maxScroll = viewer.scrollHeight - viewer.clientHeight;
       if (maxScroll > 0) {
-        viewer.scrollTop = (maxPercent / 100) * maxScroll;
+        viewer.scrollTop = (progress.currentPercent / 100) * maxScroll;
       }
     }, 450);
     return () => clearTimeout(t);
-  }, [activeSegment, pdfData, numPages, id, containerWidth]);
+  }, [activeSegment, pdfData, numPages, id]);
+
+  useEffect(() => {
+    // Reset restore guard whenever a different PDF/note is loaded.
+    hasRestoredReadingProgressRef.current = false;
+  }, [id, pdfData]);
 
   useEffect(() => {
     let selectionTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1529,6 +1542,11 @@ const NoteDetail: React.FC = () => {
         open={showPomodoroBreakAlert}
         message={pomodoroBreakMessage}
         onContinue={continuePomodoroSession}
+      />
+      <FocusSessionPauseOverlay
+        open={Boolean(focusSessionSecondsLeft !== null && isFocusSessionPaused && !isPomodoroBreakActive && !showPomodoroBreakAlert && !showFocusPopup)}
+        remainingLabel={formatFocusTimer(focusSessionSecondsLeft)}
+        onResume={() => setIsFocusSessionPaused(false)}
       />
 
       <FocusSessionCompleteCelebration

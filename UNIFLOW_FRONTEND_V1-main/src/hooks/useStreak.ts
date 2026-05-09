@@ -8,7 +8,18 @@ const REQUIRED_MS = 5 * 60 * 1000; // 5 minutes
 export const STREAK_UPDATED_EVENT = 'uniflow_streak_updated';
 
 function getTodayString() {
-    return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`; // local date, not UTC
+}
+
+function getDayDelta(fromDateStr: string, toDateStr: string): number {
+    const from = new Date(`${fromDateStr}T00:00:00`);
+    const to = new Date(`${toDateStr}T00:00:00`);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return Math.floor((to.getTime() - from.getTime()) / msPerDay);
 }
 
 function loadStreak(): number {
@@ -53,14 +64,27 @@ export function useStreak(options: UseStreakOptions = {}) {
     // Tracks how many ms the user has been active today
     const accumulatedMs = useRef<number>(0);
     const sessionStartRef = useRef<number | null>(null);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const streakAwardedRef = useRef<boolean>(false);
 
     // Check if we have already awarded the streak today
     useEffect(() => {
         const lastDate = localStorage.getItem(STREAK_DATE_KEY);
-        if (lastDate === getTodayString()) {
+        const today = getTodayString();
+        if (lastDate === today) {
             streakAwardedRef.current = true;
+        } else if (lastDate) {
+            const delta = getDayDelta(lastDate, today);
+            // If user missed at least one full day, reset current streak.
+            if (delta > 1) {
+                saveStreak(0);
+                localStorage.removeItem(STREAK_DATE_KEY);
+                setStreak(0);
+                streakAwardedRef.current = false;
+                window.dispatchEvent(new Event(STREAK_UPDATED_EVENT));
+            } else {
+                streakAwardedRef.current = false;
+            }
         }
 
         // Keep longest streak in sync with stored current (e.g. after upgrades or manual edits)
@@ -94,6 +118,10 @@ export function useStreak(options: UseStreakOptions = {}) {
     const startCounting = useCallback(() => {
         if (streakAwardedRef.current) return; // already awarded today
         if (sessionStartRef.current !== null) return; // already counting
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
 
         sessionStartRef.current = Date.now();
         localStorage.setItem(SESSION_START_KEY, String(sessionStartRef.current));
@@ -107,10 +135,14 @@ export function useStreak(options: UseStreakOptions = {}) {
             if (elapsed >= REQUIRED_MS && !streakAwardedRef.current) {
                 // Award the streak!
                 streakAwardedRef.current = true;
-                const newStreak = loadStreak() + 1;
+                const today = getTodayString();
+                const lastDate = localStorage.getItem(STREAK_DATE_KEY);
+                const prevStreak = loadStreak();
+                const dayDelta = lastDate ? getDayDelta(lastDate, today) : Number.POSITIVE_INFINITY;
+                const newStreak = dayDelta === 1 ? prevStreak + 1 : 1;
                 saveStreak(newStreak);
                 writeLongestIfHigher(newStreak);
-                localStorage.setItem(STREAK_DATE_KEY, getTodayString());
+                localStorage.setItem(STREAK_DATE_KEY, today);
                 setStreak(newStreak);
                 window.dispatchEvent(new Event(STREAK_UPDATED_EVENT));
 
@@ -128,6 +160,11 @@ export function useStreak(options: UseStreakOptions = {}) {
             accumulatedMs.current += Date.now() - sessionStartRef.current;
             localStorage.setItem('uniflow_last_active_time', String(Date.now()));
             sessionStartRef.current = null;
+        }
+        localStorage.removeItem(SESSION_START_KEY);
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
         }
     }, []);
 

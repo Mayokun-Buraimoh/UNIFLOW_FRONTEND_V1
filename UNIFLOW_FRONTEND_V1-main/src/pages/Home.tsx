@@ -864,7 +864,11 @@ const Home: React.FC = () => {
                           onTouchStart={(e) => e.stopPropagation()}
                           onClick={(e) => handleToggleTask(task.id, e)}
                         >
-                          {task.status === 'completed' && '✓'}
+                          {task.status === 'completed' && (
+                            <svg className="task-check-icon" viewBox="0 0 20 20" aria-hidden="true">
+                              <path d="M4.5 10.2L8.2 13.8L15.5 6.5" />
+                            </svg>
+                          )}
                         </div>
                         <div className="task-content">
                           <span className={`task-title ${task.status === 'completed' ? 'completed' : ''}`}>{task.title}</span>
@@ -899,8 +903,19 @@ const Home: React.FC = () => {
                                 handleEditTask(task.id);
                               }}
                               title="Rename task"
+                              aria-label="Rename task"
                             >
-                              <svg key="edit-pencil-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" stroke="none" style={{ minWidth: '20px', display: 'block', stroke: 'none' }}>
+                              <svg
+                                key="edit-pencil-icon"
+                                className="task-action-icon"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="#ffffff"
+                                stroke="none"
+                                style={{ minWidth: '16px', display: 'block', stroke: 'none' }}
+                              >
                                 <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                               </svg>
                             </button>
@@ -911,8 +926,28 @@ const Home: React.FC = () => {
                                 handleDeleteTask(task.id);
                               }}
                               title="Delete task"
+                              aria-label="Delete task"
                             >
-                              <span>Delete</span>
+                              <svg
+                                className="task-action-icon"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#ffffff"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M8 6V4h8v2" />
+                                <path d="M8 10v8" />
+                                <path d="M12 10v8" />
+                                <path d="M16 10v8" />
+                                <path d="M6 6l1 14h10l1-14" />
+                              </svg>
                             </button>
                           </div>
                         )}

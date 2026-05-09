@@ -426,7 +426,7 @@ const PlanDetails: React.FC = () => {
                                             <span className="pd-item-text">
                                                 {task.title}
                                                 {task.goalId && (
-                                                    <span style={{ display: 'block', fontSize: '11px', color: '#888', marginTop: '2px', fontWeight: 'normal' }}>
+                                                    <span className="pd-linked-goal">
                                                         ↳ {plan.targets.find(t => t.id === task.goalId)?.title || 'Unknown Goal'}
                                                     </span>
                                                 )}

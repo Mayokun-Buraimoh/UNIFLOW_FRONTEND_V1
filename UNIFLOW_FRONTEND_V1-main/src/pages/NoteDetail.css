@@ -16,6 +16,11 @@
   pointer-events: auto;
 }
 
+/* In fullscreen PDF mode, don't block edge drags used for vertical scrolling */
+.note-detail-page.pdf-fullscreen .nd-swipe-guard {
+  pointer-events: none;
+}
+
 /* ---- Settings-style header (grid: back | title | focus, one visual row) ---- */
 .nd-header-settings-style {
   display: grid !important;
@@ -712,6 +717,11 @@
   padding: 0;
 }
 
+.nd-content.fullscreen::part(scroll) {
+  /* Option A: parent container must not scroll in fullscreen. */
+  overflow: hidden !important;
+}
+
 .nd-tab-container {
   padding: 0 20px 60px 20px;
   height: auto;
@@ -722,8 +732,10 @@
   padding: 0;
   min-height: 100vh;
   min-height: 100dvh;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .nd-tab-container.nd-quiz-tab {
@@ -960,10 +972,15 @@
 .nd-tab-container.nd-notes-tab.fullscreen .nd-pdf-viewer {
   flex: 1;
   min-height: 0;
-  height: auto;
+  height: 100%;
   border-radius: 0;
   background: #101010;
   padding: 20px 16px 48px;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 
 .nd-pdf-page,
@@ -1856,6 +1873,11 @@
 .nd-tab-container.nd-notes-tab.fullscreen .react-pdf__Page__canvas {
   border-radius: 14px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  touch-action: pan-y pinch-zoom !important;
+}
+
+.nd-tab-container.nd-notes-tab.fullscreen .react-pdf__Page__textContent {
+  touch-action: pan-y pinch-zoom !important;
 }
 
 .nd-pdf-page {
