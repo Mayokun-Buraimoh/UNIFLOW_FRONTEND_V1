@@ -1,8 +1,9 @@
 import React from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { IonIcon } from '@ionic/react';
 import { arrowBackOutline } from 'ionicons/icons';
 import './BackButton.css';
+import { getDefaultStartPath } from '../utils/appPreferences';
 
 interface BackButtonProps {
     onClick?: () => void;
@@ -24,6 +25,16 @@ const BackButton: React.FC<BackButtonProps> = ({
     style
 }) => {
     const history = useHistory();
+    const location = useLocation();
+
+    const getFallbackPath = () => {
+        const pathname = location.pathname;
+        if (pathname === '/login' || pathname === '/register') return '/signup';
+        if (pathname === '/signup') return '/onboarding2';
+        if (pathname === '/onboarding2') return '/onboarding';
+        if (pathname === '/onboarding') return '/splash';
+        return getDefaultStartPath();
+    };
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -32,7 +43,11 @@ const BackButton: React.FC<BackButtonProps> = ({
         } else if (onClick) {
             onClick();
         } else {
-            history.goBack();
+            if (history.length > 1) {
+                history.goBack();
+            } else {
+                history.replace(getFallbackPath());
+            }
         }
     };
 

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Route, RouteProps, useHistory, useLocation } from 'react-router-dom';
+import { Route, RouteProps, useHistory, useLocation, matchPath } from 'react-router-dom';
 import { IonSpinner } from '@ionic/react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,15 +16,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   
   useEffect(() => {
-    // Only redirect if we are not loading, not authenticated, and the exact path matches.
-    // This prevents inactive tabs/pages held by IonRouterOutlet from triggering loops.
-    if (!loading && !isAuthenticated && location.pathname === rest.path) {
+    // Only redirect if we are not loading, not authenticated, and this route actually matches.
+    // Using matchPath handles dynamic routes like /course/:id and /note/:id.
+    const routePath = typeof rest.path === 'string' ? rest.path : '';
+    const isRouteActive = routePath
+      ? Boolean(matchPath(location.pathname, { path: routePath, exact: Boolean(rest.exact) }))
+      : false;
+
+    if (!loading && !isAuthenticated && isRouteActive) {
       history.replace({
         pathname: "/signup",
         state: { from: location }
       });
     }
-  }, [loading, isAuthenticated, location.pathname, rest.path, history]);
+  }, [loading, isAuthenticated, location, location.pathname, rest.exact, rest.path, history]);
 
   if (loading) {
     // Show loading spinner while checking authentication

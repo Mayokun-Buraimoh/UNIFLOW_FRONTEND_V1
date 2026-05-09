@@ -8,6 +8,7 @@ import "./Chatbot.css";
 import { aiClient, ChatMessage, ChatHistory } from "../api/aiClient";
 import { useAuth } from "../contexts/AuthContext";
 import BackButton from "../components/BackButton";
+import { getDefaultStartPath } from "../utils/appPreferences";
 
 interface Attachment {
   id: string;
@@ -17,6 +18,14 @@ interface Attachment {
 export default function Chatbot() {
   const history = useHistory();
   const { user } = useAuth();
+
+  const navigateBackSafely = () => {
+    if (history.length > 1) {
+      history.goBack();
+      return;
+    }
+    history.replace(getDefaultStartPath());
+  };
 
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -308,7 +317,7 @@ export default function Chatbot() {
               setIsHistoryOpen(false);
             } else {
               flushSync(() => setIsHistoryOpen(false));
-              history.goBack();
+              navigateBackSafely();
             }
           }}
         />
