@@ -988,6 +988,7 @@
 .react-pdf__Page__textContent>span {
   -webkit-user-select: text !important;
   user-select: text !important;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .nd-pdf-note-layer {
