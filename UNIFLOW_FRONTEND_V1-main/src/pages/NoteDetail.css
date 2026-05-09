@@ -991,6 +991,12 @@
   touch-action: pan-x pan-y pinch-zoom;
 }
 
+/* Fix for scrolling bug when notes field is focused */
+.nd-pdf-viewer:focus-within .react-pdf__Page__textContent,
+.nd-pdf-viewer:focus-within .react-pdf__Page__textContent > span {
+  pointer-events: none !important;
+}
+
 .nd-pdf-note-layer {
   position: absolute;
   inset: 0;
@@ -1226,6 +1232,7 @@
   font-size: 13px;
   line-height: 1.5;
   touch-action: manipulation;
+  overscroll-behavior: contain;
   -webkit-user-select: text !important;
   user-select: text !important;
   position: relative;

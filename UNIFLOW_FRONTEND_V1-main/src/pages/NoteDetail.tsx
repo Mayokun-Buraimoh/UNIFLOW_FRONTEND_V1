@@ -1720,7 +1720,7 @@ const NoteDetail: React.FC = () => {
         </div>
       )}
 
-      <IonContent className={`nd-content ${isPdfFullscreen ? 'fullscreen' : ''}`} scrollY={!isPdfFullscreen} fullscreen={isPdfFullscreen}>
+      <IonContent className={`nd-content ${isPdfFullscreen ? 'fullscreen' : ''}`} scrollY={true} fullscreen={isPdfFullscreen}>
         {activeSegment === 'notes' && (
           <div className={`nd-tab-container nd-notes-tab ${isPdfFullscreen ? 'fullscreen' : ''}`}>
             <div className="status-bar-spacer" aria-hidden="true" />
@@ -1902,7 +1902,10 @@ const NoteDetail: React.FC = () => {
                               <textarea
                                 value={note.text}
                                 onChange={(event) => updateStickyNote(note.id, event.target.value)}
-                                onPointerDown={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => {
+                                  // We do NOT stop propagation here anymore to allow scroll gestures 
+                                  // starting on the note to bubble up to the IonContent
+                                }}
                                 placeholder="Write a note..."
                                 className="nd-sticky-note-textarea"
                               />
