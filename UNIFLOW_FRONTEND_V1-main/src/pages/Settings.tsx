@@ -116,7 +116,7 @@ const Settings: React.FC = () => {
 
           <div className="settings-body">
             <div className="settings-header">
-              <BackButton />
+              <BackButton to="/home" />
               <h1 className="settings-title">{t('settings')}</h1>
             </div>
 
