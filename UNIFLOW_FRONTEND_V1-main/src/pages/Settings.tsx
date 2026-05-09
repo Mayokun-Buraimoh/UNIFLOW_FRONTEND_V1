@@ -1,4 +1,4 @@
-import { IonContent, IonPage } from '@ionic/react';
+import { IonContent, IonPage, useIonRouter } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Settings.css';
@@ -17,6 +17,7 @@ import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
 
 const Settings: React.FC = () => {
   const history = useHistory();
+  const ionRouter = useIonRouter();
   const { user, logoutWithConfirmation, logout } = useAuth();
   const { profile, updateProfile: saveProfile } = useProfile();
   const { t } = useTranslation();
@@ -116,7 +117,7 @@ const Settings: React.FC = () => {
 
           <div className="settings-body">
             <div className="settings-header">
-              <BackButton to="/home" />
+              <BackButton onClick={() => ionRouter.push('/home', 'root', 'replace')} />
               <h1 className="settings-title">{t('settings')}</h1>
             </div>
 
