@@ -117,7 +117,7 @@ const Settings: React.FC = () => {
 
           <div className="settings-body">
             <div className="settings-header">
-              <BackButton onClick={() => ionRouter.push('/home', 'root', 'replace')} />
+              <BackButton onClick={() => ionRouter.push('/home', 'none', 'replace')} />
               <h1 className="settings-title">{t('settings')}</h1>
             </div>
 

@@ -28,7 +28,7 @@ const BottomNavigation: React.FC = () => {
       focusedElement?.blur();
 
       try {
-        ionRouter.push(path, 'root', 'replace');
+        ionRouter.push(path, 'none', 'replace');
       } catch (error) {
         console.error('IonRouter navigation failed, falling back to history.replace:', error);
         try {
