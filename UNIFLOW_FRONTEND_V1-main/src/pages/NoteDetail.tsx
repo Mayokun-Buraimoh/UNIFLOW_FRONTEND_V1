@@ -696,6 +696,11 @@ const NoteDetail: React.FC = () => {
     (async () => {
       const pdfId = await ensureAiPdfId(id);
       if (!alive) return;
+
+      if (pdfId && pdfId !== id) {
+        syncNotePayloadFromStorage(pdfId);
+      }
+
       // If we're still on a numeric id (not a UUID) we can't call study endpoints (they expect course_files UUIDs).
       if (/^\d+$/.test(id) && pdfId === id) {
         console.warn('Study AI skipped: note id is not linked to a course_files UUID. Upload/select a course file to use AI.');
@@ -708,7 +713,7 @@ const NoteDetail: React.FC = () => {
     return () => {
       alive = false;
     };
-  }, [id, fetchFlashcards, fetchQuizzes, fetchSummary]);
+  }, [id, fetchFlashcards, fetchQuizzes, fetchSummary, ensureAiPdfId, syncNotePayloadFromStorage]);
 
   const [containerWidth, setContainerWidth] = useState<number>(window.innerWidth - 40);
 
@@ -823,7 +828,7 @@ const NoteDetail: React.FC = () => {
           if (rect.width > 0 || rect.height > 0) {
             setAskAIPos({
               x: rect.left + rect.width / 2,
-              y: Math.max(rect.top - 56, 60)
+              y: Math.min(rect.bottom + 16, window.innerHeight - 60)
             });
           }
         } else {
@@ -1720,7 +1725,7 @@ const NoteDetail: React.FC = () => {
         </div>
       )}
 
-      <IonContent className={`nd-content ${isPdfFullscreen ? 'fullscreen' : ''}`} scrollY={true} fullscreen={isPdfFullscreen}>
+      <IonContent className={`nd-content ${isPdfFullscreen ? 'fullscreen' : ''}`} scrollY={!isPdfFullscreen} fullscreen={isPdfFullscreen}>
         {activeSegment === 'notes' && (
           <div className={`nd-tab-container nd-notes-tab ${isPdfFullscreen ? 'fullscreen' : ''}`}>
             <div className="status-bar-spacer" aria-hidden="true" />
