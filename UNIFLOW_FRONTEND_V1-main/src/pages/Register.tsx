@@ -1,6 +1,6 @@
 import { IonContent, IonPage, IonToast, IonInput, IonButton, IonItem, IonLabel } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './Register.css';
 import BackButton from '../components/BackButton';
@@ -8,7 +8,15 @@ import { getDefaultStartPath } from '../utils/appPreferences';
 
 const Register: React.FC = () => {
   const history = useHistory();
-  const { register, error, clearError } = useAuth();
+  const { register, error, clearError, isAuthenticated, loading: authLoading } = useAuth();
+
+  // If the user is already signed in, bounce them to home so the sign-up screen
+  // can never get "stuck" behind authenticated tabs after a back/swipe-back.
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      history.replace(getDefaultStartPath());
+    }
+  }, [authLoading, isAuthenticated, history]);
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -62,8 +70,10 @@ const Register: React.FC = () => {
       setToastColor('success');
       setShowToast(true);
       
-      // Immediate redirect - no delay needed
-      history.push(getDefaultStartPath());
+      // Replace (not push) so /register is removed from the history stack. Otherwise
+      // the bottom-nav 'replace' action on Courses/Plans leaves /register underneath
+      // and back/swipe-back lands the user on the registration screen.
+      history.replace(getDefaultStartPath());
     } catch (error: any) {
       setToastMessage(error.message || 'Registration failed. Please try again.');
       setToastColor('danger');

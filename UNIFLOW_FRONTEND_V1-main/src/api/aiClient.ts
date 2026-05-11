@@ -37,7 +37,13 @@ export const aiClient = {
     /**
      * Send a message to the AI
      */
-    async chat(userId: string, message: string, sessionId?: string, files?: File[]): Promise<AIResponse> {
+    async chat(
+        userId: string,
+        message: string,
+        sessionId?: string,
+        files?: File[],
+        pdfId?: string
+    ): Promise<AIResponse> {
         let body: BodyInit;
         let headers: HeadersInit = {};
 
@@ -46,16 +52,19 @@ export const aiClient = {
             formData.append('user_id', userId);
             formData.append('message', message);
             if (sessionId) formData.append('session_id', sessionId);
+            if (pdfId) formData.append('pdf_id', pdfId);
             files.forEach(file => {
                 formData.append('files', file);
             });
             body = formData;
         } else {
-            body = JSON.stringify({
+            const payload: Record<string, string> = {
                 user_id: userId,
                 message,
-                session_id: sessionId
-            });
+            };
+            if (sessionId) payload.session_id = sessionId;
+            if (pdfId) payload.pdf_id = pdfId;
+            body = JSON.stringify(payload);
             headers = {
                 'Content-Type': 'application/json',
             };

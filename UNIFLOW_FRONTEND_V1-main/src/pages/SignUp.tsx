@@ -1,7 +1,8 @@
 import { IonContent, IonPage, IonToast } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { getDefaultStartPath } from '../utils/appPreferences';
 import './SignUp.css';
 
 const SignUp: React.FC = () => {
@@ -10,6 +11,8 @@ const SignUp: React.FC = () => {
   // Add error boundary for AuthContext
   let authContext;
   let signInWithApple, signInWithGoogle, error, clearError;
+  let isAuthenticated = false;
+  let authLoading = false;
   
   try {
     console.log('Attempting to use AuthContext...');
@@ -19,6 +22,8 @@ const SignUp: React.FC = () => {
     signInWithGoogle = authContext.signInWithGoogle;
     error = authContext.error;
     clearError = authContext.clearError;
+    isAuthenticated = authContext.isAuthenticated;
+    authLoading = authContext.loading;
   } catch (error) {
     console.error('AuthContext error:', error);
     // Provide fallback functions
@@ -31,6 +36,14 @@ const SignUp: React.FC = () => {
     clearError = () => {};
     error = null;
   }
+
+  // If the user is already signed in, bounce them to home so the sign-up screen
+  // can never get "stuck" behind authenticated tabs after a back/swipe-back.
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      history.replace(getDefaultStartPath());
+    }
+  }, [authLoading, isAuthenticated, history]);
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');

@@ -11,9 +11,8 @@ import DeleteAccountModal from '../components/DeleteAccountModal';
 import { useProfile, PROFILE_UPDATED_EVENT } from '../hooks/useProfile';
 import { writeStoredProfilePicture } from '../utils/profileLocalPicture';
 import { userService } from '../api/services';
-import { Capacitor } from '@capacitor/core';
-import { StatusBar, Style } from '@capacitor/status-bar';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
+import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const Settings: React.FC = () => {
   const history = useHistory();
@@ -39,14 +38,10 @@ const Settings: React.FC = () => {
 
   useBlockRightSwipe();
 
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
-      return;
-    }
-
-    StatusBar.setBackgroundColor({ color: '#FFFFFF' }).catch(() => { });
-    StatusBar.setStyle({ style: Style.Dark }).catch(() => { });
-  }, []);
+  // Settings has a white background, so we want dark icons.
+  // (Previously called Style.Dark, which means *light* icons in Capacitor's
+  // inverted enum — that's why the bar was invisible across the app.)
+  useStatusBarStyle('dark-content', '#FFFFFF');
 
   const handleEditAvatar = () => {
     setSelectedAvatar(currentAvatar);

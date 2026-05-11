@@ -1,6 +1,6 @@
 import { IonContent, IonPage, IonToast, IonInput, IonButton, IonItem, IonLabel } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css';
 import BackButton from '../components/BackButton';
@@ -8,7 +8,16 @@ import { getDefaultStartPath } from '../utils/appPreferences';
 
 const Login: React.FC = () => {
   const history = useHistory();
-  const { login, error, clearError } = useAuth();
+  const { login, error, clearError, isAuthenticated, loading: authLoading } = useAuth();
+
+  // If the user is already signed in (e.g. landed here via browser back / swipe-back
+  // after the auth route was left in the history stack), bounce them to home so the
+  // sign-in screen can never get "stuck" behind authenticated tabs like Courses/Plans.
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      history.replace(getDefaultStartPath());
+    }
+  }, [authLoading, isAuthenticated, history]);
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -65,8 +74,10 @@ const Login: React.FC = () => {
       setToastColor('success');
       setShowToast(true);
 
-      // Immediate redirect - no delay needed
-      history.push(getDefaultStartPath());
+      // Replace (not push) so /login is removed from the history stack. Otherwise the
+      // bottom-nav 'replace' action on Courses/Plans leaves /login underneath and
+      // back/swipe-back lands the user on the sign-in screen.
+      history.replace(getDefaultStartPath());
     } catch (error: any) {
       setToastMessage(error.message || 'Login failed. Please try again.');
       setToastColor('danger');

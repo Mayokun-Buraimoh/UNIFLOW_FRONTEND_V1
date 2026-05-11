@@ -975,15 +975,11 @@
   border-radius: 0;
   background: #101010;
   padding: 20px 16px 48px;
-<<<<<<< HEAD
   overflow-y: auto !important;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   touch-action: pan-y;
-=======
-  overflow-y: auto;
->>>>>>> c4e235b (Fix NoteDetail scrolling, PDF loading, and Ask AI alignment)
 }
 
 .nd-pdf-page,
@@ -1865,6 +1861,79 @@
   text-align: center;
   font-size: 13px;
   color: #666;
+}
+
+/* ---------------- Flashcards: responsive (tablet & desktop) ----------------
+   On phones the flashcard naturally fills the column. On larger screens
+   (iPad, landscape, desktop) the column is much wider, so we:
+   - clamp the card + its sibling controls to a sensible reading width
+   - center them horizontally inside the tab container
+   - switch the card to a slightly landscape aspect-ratio so it reads as a
+     proper "card" rather than a tall, near-empty rectangle
+   - bump up the typography to match the new card size                    */
+@media (min-width: 768px) {
+  .nd-tab-container.nd-flashcards-tab {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-fc-header,
+  .nd-tab-container.nd-flashcards-tab .nd-flashcard-container,
+  .nd-tab-container.nd-flashcards-tab .nd-fc-dots,
+  .nd-tab-container.nd-flashcards-tab .nd-fc-controls,
+  .nd-tab-container.nd-flashcards-tab .nd-fc-status {
+    width: 100%;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-flashcard-container {
+    aspect-ratio: 1.6 / 1;
+    max-height: 360px;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-flashcard-front,
+  .nd-tab-container.nd-flashcards-tab .nd-flashcard-back {
+    padding: 40px 36px;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-fc-question {
+    font-size: 22px;
+    line-height: 1.45;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-fc-answer {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-fc-book-icon {
+    font-size: 36px;
+    margin-bottom: 28px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .nd-tab-container.nd-flashcards-tab .nd-fc-header,
+  .nd-tab-container.nd-flashcards-tab .nd-flashcard-container,
+  .nd-tab-container.nd-flashcards-tab .nd-fc-dots,
+  .nd-tab-container.nd-flashcards-tab .nd-fc-controls,
+  .nd-tab-container.nd-flashcards-tab .nd-fc-status {
+    max-width: 640px;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-flashcard-container {
+    max-height: 400px;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-fc-question {
+    font-size: 24px;
+  }
+
+  .nd-tab-container.nd-flashcards-tab .nd-fc-answer {
+    font-size: 18px;
+  }
 }
 
 /* React PDF overrides */

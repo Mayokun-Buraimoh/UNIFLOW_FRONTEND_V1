@@ -59,6 +59,30 @@ function getRecognitionCtor(): SpeechRecognitionCtor | null {
 
 export class SpeechRecognitionSession {
   private recognition: SpeechRecognitionInstance | null = null;
+  private lastDeliveredTranscript = '';
+
+  private static normalizeChunk(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  private static clampRepeatedTokens(text: string): string {
+    const parts = text.split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) return text;
+    const out: string[] = [];
+    let repeatCount = 0;
+    for (const token of parts) {
+      const prev = out[out.length - 1];
+      if (prev && prev.toLowerCase() === token.toLowerCase()) {
+        repeatCount += 1;
+        // Keep at most 2 identical adjacent tokens (handles "very very" but blocks runaway loops).
+        if (repeatCount >= 2) continue;
+      } else {
+        repeatCount = 0;
+      }
+      out.push(token);
+    }
+    return out.join(' ');
+  }
 
   start(
     onResult: SpeechRecognitionResultHandler,
@@ -75,31 +99,50 @@ export class SpeechRecognitionSession {
 
     const rec = new Ctor();
     this.recognition = rec;
-    rec.continuous = true;
-    rec.interimResults = true;
+    this.lastDeliveredTranscript = '';
+    // iOS WebKit can re-emit prior chunks aggressively in continuous mode.
+    // One-shot recognition is more stable for the Siri-like quick prompt UX.
+    rec.continuous = false;
+    // On iOS WebKit this reduces duplicated interim noise.
+    rec.interimResults = false;
     rec.lang = typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
 
     rec.onresult = (event: SpeechRecognitionResultEvent) => {
-      let interim = '';
-      let finalChunk = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Build transcript from the full result list to avoid duplicate accumulation
+      // when iOS WebKit replays final chunks across events.
+      let finalText = '';
+      let interimText = '';
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
-        const piece = result[0]?.transcript ?? '';
-        if (result.isFinal) finalChunk += piece;
-        else interim += piece;
+        const piece = SpeechRecognitionSession.normalizeChunk(result[0]?.transcript ?? '');
+        if (!piece) continue;
+        if (result.isFinal) finalText += `${finalText ? ' ' : ''}${piece}`;
+        else interimText += `${interimText ? ' ' : ''}${piece}`;
       }
-      if (finalChunk) {
-        onResult(finalChunk.trim(), true);
-      } else if (interim) {
-        onResult(interim.trim(), false);
-      }
+
+      const combined = SpeechRecognitionSession.clampRepeatedTokens(SpeechRecognitionSession.normalizeChunk(
+        `${finalText}${finalText && interimText ? ' ' : ''}${interimText}`
+      ));
+      if (!combined) return;
+
+      // Suppress duplicate callbacks from engines that emit unchanged transcripts repeatedly.
+      if (combined === this.lastDeliveredTranscript) return;
+      this.lastDeliveredTranscript = combined;
+
+      // Treat it as final when there's no interim segment left.
+      onResult(combined, !interimText);
     };
 
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (event.error === 'aborted' || event.error === 'no-speech') {
+      const code = event.error || 'error';
+      if (code === 'aborted') {
         return;
       }
-      onError(event.error || 'error');
+      if (code === 'no-speech') {
+        onError('no-speech');
+        return;
+      }
+      onError(code);
     };
 
     rec.onend = () => {
@@ -127,6 +170,7 @@ export class SpeechRecognitionSession {
       }
     }
     this.recognition = null;
+    this.lastDeliveredTranscript = '';
   }
 
   abort(): void {
@@ -137,5 +181,6 @@ export class SpeechRecognitionSession {
       /* noop */
     }
     this.recognition = null;
+    this.lastDeliveredTranscript = '';
   }
 }

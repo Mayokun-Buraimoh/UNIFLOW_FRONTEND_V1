@@ -15,8 +15,14 @@ const config: CapacitorConfig = {
       spinnerColor: "#4CAF50"
     },
     StatusBar: {
-      style: 'dark',
-      backgroundColor: '#ffffff'
+      // Capacitor's StatusBar enum is inverted: 'DARK' = white text, 'LIGHT' = dark text.
+      // We use 'DEFAULT' here so iOS picks a sensible style during the brief native
+      // launch window; once the React app mounts, `StatusBarController` in App.tsx
+      // (and per-page `useStatusBarStyle` calls) drive the style based on the route.
+      // Android only: backgroundColor is honored when overlaysWebView is false.
+      style: 'DEFAULT',
+      backgroundColor: '#ffffff',
+      overlaysWebView: false
     }
   }
 };

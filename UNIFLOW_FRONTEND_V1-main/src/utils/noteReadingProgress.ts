@@ -18,7 +18,9 @@ export function loadNoteReadingProgress(noteId: string | undefined): NoteReading
     const hasCurrentPercent = typeof parsed?.currentPercent === 'number';
 
     const currentRaw =
-      hasCurrentPercent ? parsed.currentPercent : 0;
+      hasCurrentPercent && typeof parsed.currentPercent === 'number'
+        ? parsed.currentPercent
+        : 0;
     const maxRaw =
       typeof parsed?.maxPercent === 'number'
         ? parsed.maxPercent

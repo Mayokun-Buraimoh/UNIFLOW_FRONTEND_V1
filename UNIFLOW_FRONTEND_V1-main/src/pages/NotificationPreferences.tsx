@@ -4,6 +4,8 @@ import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import './NotificationPreferences.css';
+import { NotificationService, STREAK_NOTIF_PREF_KEY } from '../services/NotificationService';
+import { PUSH_MASTER_PREF_KEY, requestTodaysClassNotificationsSync } from '../services/scheduleClassNotifications';
 import BackButton from '../components/BackButton';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
 
@@ -26,8 +28,11 @@ const NotificationPreferences: React.FC = () => {
       setPushNotifications(settings.pushNotifications ?? true);
       setDndDuringFocus(settings.dndDuringFocus ?? true);
       setSummaryFrequency(settings.summaryFrequency ?? 'Daily');
-      setStreakNotification(settings.streakNotification ?? true);
+      const sn = settings.streakNotification ?? true;
+      setStreakNotification(sn);
       setDailyTaskBriefing(settings.dailyTaskBriefing ?? true);
+      localStorage.setItem(STREAK_NOTIF_PREF_KEY, sn ? 'true' : 'false');
+      localStorage.setItem(PUSH_MASTER_PREF_KEY, (settings.pushNotifications ?? true) ? 'true' : 'false');
     }
   }, [profile]);
 
@@ -45,6 +50,10 @@ const NotificationPreferences: React.FC = () => {
       };
       
       await updateNotificationSettings(notificationSettings);
+      localStorage.setItem(STREAK_NOTIF_PREF_KEY, streakNotification ? 'true' : 'false');
+      localStorage.setItem(PUSH_MASTER_PREF_KEY, pushNotifications ? 'true' : 'false');
+      void NotificationService.syncStreakInactivityReminder();
+      requestTodaysClassNotificationsSync();
       console.log('Notification preferences updated successfully');
       history.goBack();
     } catch (error) {

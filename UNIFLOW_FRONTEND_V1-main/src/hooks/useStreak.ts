@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { NotificationService, requestStreakInactivityReminderSync } from '../services/NotificationService';
 
 const STREAK_KEY = 'uniflow_streak';
 const STREAK_DATE_KEY = 'uniflow_streak_date';   // last day the streak was counted
@@ -105,6 +106,9 @@ export function useStreak(options: UseStreakOptions = {}) {
                 }
             }
         }
+        if (trackActivity) {
+            void NotificationService.syncStreakInactivityReminder();
+        }
     }, [trackActivity]);
 
     useEffect(() => {
@@ -129,6 +133,7 @@ export function useStreak(options: UseStreakOptions = {}) {
         timerRef.current = setInterval(() => {
             if (sessionStartRef.current === null) return;
             localStorage.setItem('uniflow_last_active_time', String(Date.now()));
+            requestStreakInactivityReminderSync();
 
             const elapsed = accumulatedMs.current + (Date.now() - sessionStartRef.current);
 
@@ -145,6 +150,7 @@ export function useStreak(options: UseStreakOptions = {}) {
                 localStorage.setItem(STREAK_DATE_KEY, today);
                 setStreak(newStreak);
                 window.dispatchEvent(new Event(STREAK_UPDATED_EVENT));
+                requestStreakInactivityReminderSync();
 
                 // Stop the timer
                 if (timerRef.current) {
@@ -159,6 +165,7 @@ export function useStreak(options: UseStreakOptions = {}) {
         if (sessionStartRef.current !== null) {
             accumulatedMs.current += Date.now() - sessionStartRef.current;
             localStorage.setItem('uniflow_last_active_time', String(Date.now()));
+            requestStreakInactivityReminderSync();
             sessionStartRef.current = null;
         }
         localStorage.removeItem(SESSION_START_KEY);
@@ -180,11 +187,13 @@ export function useStreak(options: UseStreakOptions = {}) {
             localStorage.removeItem(STREAK_DATE_KEY);
             setStreak(0);
             window.dispatchEvent(new Event(STREAK_UPDATED_EVENT));
+            void NotificationService.syncStreakInactivityReminder();
         }
 
         const handleVisible = () => {
             if (!document.hidden) {
                 startCounting();
+                requestStreakInactivityReminderSync();
             } else {
                 pauseCounting();
             }

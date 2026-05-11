@@ -33,7 +33,13 @@ const BackButton: React.FC<BackButtonProps> = ({
         if (pathname === '/signup') return '/onboarding2';
         if (pathname === '/onboarding2') return '/onboarding';
         if (pathname === '/onboarding') return '/splash';
-        return getDefaultStartPath();
+        const defaultPath = getDefaultStartPath();
+        // Bottom nav uses `root` + `replace`, so stack depth is often 1. If the user's
+        // default start page equals the current route, `replace(default)` would no-op.
+        if (defaultPath === pathname) {
+            return '/home';
+        }
+        return defaultPath;
     };
 
     const handleClick = (e: React.MouseEvent) => {

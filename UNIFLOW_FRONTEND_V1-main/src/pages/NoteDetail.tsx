@@ -40,7 +40,12 @@ import {
   loadNoteReadingProgress,
   saveNoteReadingProgress,
 } from '../utils/noteReadingProgress';
-import { NOTE_PDF_UPDATED_EVENT, setNotePdfDataInStorage } from '../utils/notePdfStorage';
+import {
+  NOTE_PDF_UPDATED_EVENT,
+  setNotePdfDataInStorage,
+  UNIFLOW_PENDING_NOTE_ROUTE_EVENT,
+} from '../utils/notePdfStorage';
+import { isLocalOnlyFileId, isUuid } from '../utils/uuidUtils';
 import { resolveDjangoAiOrigin } from '../constants/djangoAiPublic';
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
 
@@ -48,6 +53,17 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 // Django API base — separate from the TS backend and environment-aware.
 const DJANGO_API_URL = resolveDjangoAiOrigin();
+
+function miniChatErrorUserText(err: unknown): string {
+  const msg =
+    err instanceof Error
+      ? err.message
+      : typeof err === 'string'
+        ? err
+        : 'Unknown error';
+  const max = 400;
+  return msg.length > max ? `${msg.slice(0, max)}…` : msg;
+}
 
 interface Flashcard {
   id: number;
@@ -122,6 +138,41 @@ const NoteDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
 
+  /** Replace `/note/local-*` with `/note/<serverUuid>` once course upload finishes (see `rememberPendingNoteRouteMapping`). */
+  useEffect(() => {
+    if (!id || !id.startsWith('local-')) return undefined;
+    const pendingKey = `uniflow_pending_route_${id}`;
+    const applyServerId = (serverId: string) => {
+      const sid = serverId.trim();
+      if (!isUuid(sid)) return;
+      try {
+        localStorage.removeItem(pendingKey);
+      } catch {
+        /* noop */
+      }
+      history.replace(`/note/${sid}`);
+    };
+    const tryRead = () => {
+      try {
+        const mapped = localStorage.getItem(pendingKey);
+        if (mapped?.trim()) applyServerId(mapped);
+      } catch {
+        /* noop */
+      }
+    };
+    tryRead();
+    const onReady = (e: Event) => {
+      const d = (e as CustomEvent<{ localId?: string; serverId?: string }>).detail;
+      if (d?.localId === id && d.serverId) applyServerId(d.serverId);
+    };
+    window.addEventListener(UNIFLOW_PENDING_NOTE_ROUTE_EVENT, onReady as EventListener);
+    const interval = window.setInterval(tryRead, 1000);
+    return () => {
+      window.removeEventListener(UNIFLOW_PENDING_NOTE_ROUTE_EVENT, onReady as EventListener);
+      window.clearInterval(interval);
+    };
+  }, [id, history]);
+
   // Mini Chatbot Selection States
   const [selectedText, setSelectedText] = useState('');
   const [askAIPos, setAskAIPos] = useState<{ x: number, y: number } | null>(null);
@@ -148,6 +199,8 @@ const NoteDetail: React.FC = () => {
   const [focusTimer, setFocusTimer] = useState(25);
   const [dndEnabled, setDndEnabled] = useState(false);
   const [focusSessionSecondsLeft, setFocusSessionSecondsLeft] = useState<number | null>(null);
+  /** Keeps async study fetches from auto-switching tabs after focus has started (avoids stale closures). */
+  const focusSessionActiveRef = useRef(false);
   const [isFocusSessionPaused, setIsFocusSessionPaused] = useState(false);
   const [showQuizBlockedAlert, setShowQuizBlockedAlert] = useState(false);
   const [showPomodoroBreakAlert, setShowPomodoroBreakAlert] = useState(false);
@@ -159,6 +212,10 @@ const NoteDetail: React.FC = () => {
     { value: 'active_recall', label: 'Active recall' },
     { value: 'study_your_way', label: 'Study your way' }
   ];
+
+  useEffect(() => {
+    focusSessionActiveRef.current = focusSessionSecondsLeft !== null;
+  }, [focusSessionSecondsLeft]);
 
   // PDF states
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -327,6 +384,10 @@ const NoteDetail: React.FC = () => {
 
   const fetchAndCachePdfForFile = useCallback(async (courseId: string, fileId: string): Promise<string | null> => {
     if (!courseId || !fileId) return null;
+    // `course_files.id` is a UUID; numeric / `local-*` / `JOT_*` ids must not hit this endpoint.
+    if (!isUuid(fileId)) {
+      return null;
+    }
     try {
       const token = localStorage.getItem('uniflow_token');
       if (!token) return null;
@@ -452,8 +513,7 @@ const NoteDetail: React.FC = () => {
       if (data.document_name) setDocumentName(data.document_name);
       if (data.course_name) setCourseName(data.course_name);
 
-      // Auto-switch to flashcards tab once data arrives
-      if (cards.length > 0) {
+      if (cards.length > 0 && !focusSessionActiveRef.current) {
         setActiveSegment('flashcards');
       }
     } catch (err) {
@@ -479,8 +539,7 @@ const NoteDetail: React.FC = () => {
       if (data.document_name) setDocumentName(data.document_name);
       if (data.course_name) setCourseName(data.course_name);
 
-      // Auto-switch to quiz tab once data arrives when focus mode is inactive.
-      if (qz.length > 0 && focusSessionSecondsLeft === null) {
+      if (qz.length > 0 && !focusSessionActiveRef.current) {
         setActiveSegment('quiz');
       }
     } catch (err) {
@@ -488,7 +547,7 @@ const NoteDetail: React.FC = () => {
     } finally {
       setQuizzesLoading(false);
     }
-  }, [focusSessionSecondsLeft]);
+  }, []);
 
   // Fetch summaries from Django API
   const fetchSummary = useCallback(async (pdfId: string) => {
@@ -505,8 +564,7 @@ const NoteDetail: React.FC = () => {
       if (data.document_name) setDocumentName(data.document_name);
       if (data.course_name) setCourseName(data.course_name);
 
-      // Auto-switch to summary tab once data arrives
-      if (sections.length > 0) {
+      if (sections.length > 0 && !focusSessionActiveRef.current) {
         setActiveSegment('summary');
       }
     } catch (err) {
@@ -521,7 +579,18 @@ const NoteDetail: React.FC = () => {
       const s = (rawId || '').trim();
       if (!s) return s;
 
+      // Never call Django promote for client-only or jotting ids.
+      if (isLocalOnlyFileId(s)) {
+        setAiPdfId('');
+        return s;
+      }
+
       // UUID ids (course_files.id) work as-is. Note ids tend to be numeric strings.
+      if (isUuid(s)) {
+        setAiPdfId(s);
+        return s;
+      }
+
       const isNumeric = /^\d+$/.test(s);
       if (!isNumeric) {
         setAiPdfId(s);
@@ -701,9 +770,13 @@ const NoteDetail: React.FC = () => {
         syncNotePayloadFromStorage(pdfId);
       }
 
-      // If we're still on a numeric id (not a UUID) we can't call study endpoints (they expect course_files UUIDs).
-      if (/^\d+$/.test(id) && pdfId === id) {
-        console.warn('Study AI skipped: note id is not linked to a course_files UUID. Upload/select a course file to use AI.');
+      // Study endpoints require a real `course_files` UUID (or promoted pdf_id).
+      if (!isUuid(pdfId)) {
+        if (/^\d+$/.test(id) && pdfId === id) {
+          console.warn(
+            'Study AI skipped: note id is not linked to a course_files UUID. Upload/select a course file to use AI.'
+          );
+        }
         return;
       }
       fetchFlashcards(pdfId);
@@ -800,7 +873,6 @@ const NoteDetail: React.FC = () => {
       // Debounce – wait for the user to finish dragging handles
       if (selectionTimer) clearTimeout(selectionTimer);
       selectionTimer = setTimeout(() => {
-        // Only show popup in notes view, when the chatbot isn't already open
         if (activeSegment !== 'notes' || showMiniChatbot) return;
 
         const selection = window.getSelection();
@@ -993,6 +1065,14 @@ const NoteDetail: React.FC = () => {
   const handlePrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
   const handleNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages || 1));
 
+  const miniChatBoundPdfId = (): string | undefined => {
+    const fromAi = aiPdfId?.trim();
+    if (fromAi && isUuid(fromAi)) return fromAi;
+    const routeId = id?.trim();
+    if (routeId && isUuid(routeId)) return routeId;
+    return undefined;
+  };
+
   const handleAskAI = async () => {
     if (!selectedText || !user?.id) return;
     setAskAIPos(null);
@@ -1009,11 +1089,18 @@ const NoteDetail: React.FC = () => {
     setMiniChatMessages([initialUserMessage]);
     setIsMiniChatLoading(true);
 
-    const sessionId = miniChatSessionId || `session_${Math.random().toString(36).substr(2, 9)}`;
-    if (!miniChatSessionId) setMiniChatSessionId(sessionId);
+    const sessionId = crypto.randomUUID();
+    setMiniChatSessionId(sessionId);
 
     try {
-      const apiResponse = await aiClient.chat(user.id, initialUserMessage.text, sessionId);
+      const apiResponse = await aiClient.chat(
+        user.id,
+        initialUserMessage.text,
+        sessionId,
+        undefined,
+        miniChatBoundPdfId()
+      );
+      setMiniChatSessionId(apiResponse.session_id);
       const aiMessage: ChatMessage = {
         id: Math.random().toString(36).substr(2, 9),
         text: apiResponse.response,
@@ -1022,9 +1109,10 @@ const NoteDetail: React.FC = () => {
       };
       setMiniChatMessages(prev => [...prev, aiMessage]);
     } catch (e) {
+      console.error('Mini chat (ask AI) failed', e);
       setMiniChatMessages(prev => [...prev, {
-        id: 'error',
-        text: "Sorry, I couldn't reach the AI server.",
+        id: `error-${Date.now()}`,
+        text: miniChatErrorUserText(e),
         isUser: false,
         timestamp: new Date()
       }]);
@@ -1047,11 +1135,21 @@ const NoteDetail: React.FC = () => {
     setMiniChatMessages(prev => [...prev, userMsg]);
     setIsMiniChatLoading(true);
 
-    const sessionId = miniChatSessionId || `session_${Math.random().toString(36).substr(2, 9)}`;
-    if (!miniChatSessionId) setMiniChatSessionId(sessionId);
+    let sessionId = miniChatSessionId;
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      setMiniChatSessionId(sessionId);
+    }
 
     try {
-      const apiResponse = await aiClient.chat(user.id, newMsgText, sessionId);
+      const apiResponse = await aiClient.chat(
+        user.id,
+        newMsgText,
+        sessionId,
+        undefined,
+        miniChatBoundPdfId()
+      );
+      setMiniChatSessionId(apiResponse.session_id);
       const aiMessage: ChatMessage = {
         id: Math.random().toString(36).substr(2, 9),
         text: apiResponse.response,
@@ -1060,9 +1158,10 @@ const NoteDetail: React.FC = () => {
       };
       setMiniChatMessages(prev => [...prev, aiMessage]);
     } catch (e) {
+      console.error('Mini chat send failed', e);
       setMiniChatMessages(prev => [...prev, {
-        id: 'error',
-        text: "Communication error.",
+        id: `error-${Date.now()}`,
+        text: miniChatErrorUserText(e),
         isUser: false,
         timestamp: new Date()
       }]);
@@ -1499,6 +1598,39 @@ const NoteDetail: React.FC = () => {
         </div>
       )}
 
+      {id?.startsWith('local-') && (
+        <div
+          className="nd-upload-pending-banner"
+          style={{
+            padding: '10px 16px',
+            background: '#fff8e6',
+            color: '#5c4a00',
+            fontSize: 13,
+            lineHeight: 1.4,
+            textAlign: 'center',
+            borderBottom: '1px solid #f0e0bc',
+          }}
+        >
+          Upload in progress — this page will switch to your server file link when ready. Or go back to the course and
+          open the note again.
+          <button
+            type="button"
+            style={{
+              marginLeft: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#2d6a4f',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
+            onClick={() => history.goBack()}
+          >
+            Go back
+          </button>
+        </div>
+      )}
+
       {isFocusSessionActive && activeSegment !== 'notes' && (
         <button
           type="button"
@@ -1637,6 +1769,7 @@ const NoteDetail: React.FC = () => {
                   setShowFocusPopup(false);
                   setActiveSegment('notes');
                   setIsPdfFullscreen(true);
+                  setAskAIPos(null);
                   setFocusSessionSecondsLeft(plannedSeconds);
                   setIsFocusSessionPaused(false);
                   return;

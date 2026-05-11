@@ -1,4 +1,25 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
+
+/** Local notification id for “1 hour before 24h since last activity” streak warning */
+export const STREAK_INACTIVITY_NOTIFICATION_ID = 92001;
+
+/** Mirror of profile `streakNotification`; updated when user saves Notification preferences */
+export const STREAK_NOTIF_PREF_KEY = 'uniflow_streak_notif_enabled';
+
+const MS_24H = 24 * 60 * 60 * 1000;
+const MS_1H = 60 * 60 * 1000;
+
+let streakSyncDebounce: ReturnType<typeof setTimeout> | null = null;
+
+/** Debounced so the 5s activity interval does not hammer the native scheduler */
+export function requestStreakInactivityReminderSync(): void {
+  if (streakSyncDebounce) clearTimeout(streakSyncDebounce);
+  streakSyncDebounce = setTimeout(() => {
+    streakSyncDebounce = null;
+    void NotificationService.syncStreakInactivityReminder();
+  }, 2500);
+}
 
 export class NotificationService {
   static async requestPermissions() {
@@ -90,6 +111,76 @@ export class NotificationService {
         }
       ]
     });
+  }
+
+  /**
+   * One hour before 24 hours elapse since `uniflow_last_active_time`, remind the user to open the app
+   * so their streak logic can run (matches useStreak idle reset window).
+   */
+  static async syncStreakInactivityReminder(): Promise<void> {
+    if (Capacitor.getPlatform() === 'web') {
+      return;
+    }
+
+    const cancelOnly = async () => {
+      try {
+        await LocalNotifications.cancel({ notifications: [{ id: STREAK_INACTIVITY_NOTIFICATION_ID }] });
+      } catch {
+        /* noop */
+      }
+    };
+
+    const streakNotifEnabled = localStorage.getItem(STREAK_NOTIF_PREF_KEY) !== 'false';
+    if (!streakNotifEnabled) {
+      await cancelOnly();
+      return;
+    }
+
+    const streakRaw = localStorage.getItem('uniflow_streak');
+    const streak = streakRaw == null ? 0 : parseInt(streakRaw, 10);
+    if (!Number.isFinite(streak) || streak <= 0) {
+      await cancelOnly();
+      return;
+    }
+
+    const lastActive = parseInt(localStorage.getItem('uniflow_last_active_time') || '0', 10);
+    if (!lastActive || Number.isNaN(lastActive)) {
+      await cancelOnly();
+      return;
+    }
+
+    const notifyAt = lastActive + MS_24H - MS_1H;
+    if (notifyAt <= Date.now()) {
+      await cancelOnly();
+      return;
+    }
+
+    try {
+      const perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== 'granted') {
+        const req = await LocalNotifications.requestPermissions();
+        if (req.display !== 'granted') {
+          return;
+        }
+      }
+
+      await cancelOnly();
+
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: STREAK_INACTIVITY_NOTIFICATION_ID,
+            title: 'Keep your streak',
+            body: `You have about an hour left—open UniFlow so you do not lose your ${streak}-day streak.`,
+            schedule: { at: new Date(notifyAt) },
+            actionTypeId: '',
+            extra: { type: 'STREAK_INACTIVITY' },
+          },
+        ],
+      });
+    } catch (e) {
+      console.warn('[notifications] streak inactivity reminder failed', e);
+    }
   }
 
   static async scheduleDailyTargets(id: number, message: string, hour: number, minute: number) {

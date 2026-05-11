@@ -35,6 +35,8 @@ import Jotting from './pages/Jotting';
 import Pricing from './pages/Pricing';
 import { useStreak } from './hooks/useStreak';
 import { initializeLocalFirstSync } from './localfirst/syncQueue';
+import { requestTodaysClassNotificationsSync } from './services/scheduleClassNotifications';
+import { applyStatusBarStyle, type AppStatusBarStyle } from './utils/statusBar';
 const RootRoute = () => {
   const { loading } = useAuth();
 
@@ -53,6 +55,9 @@ const StreakActivityTracker = () => {
   return null;
 };
 
+const BACK_SWIPE_EDGE_PX = 40;
+const BACK_SWIPE_MIN_DX = 90;
+
 const GlobalLeftSwipeBack = () => {
   const history = useHistory();
   const location = useLocation();
@@ -62,7 +67,8 @@ const GlobalLeftSwipeBack = () => {
 
     let startX = 0;
     let startY = 0;
-    let tracking = false;
+    /** True only when touch began near the left edge (iOS-style interactive pop). */
+    let trackingFromEdge = false;
 
     const shouldIgnoreTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) return false;
@@ -74,30 +80,32 @@ const GlobalLeftSwipeBack = () => {
 
     const onTouchStart = (event: TouchEvent) => {
       if (shouldIgnoreTarget(event.target)) {
-        tracking = false;
+        trackingFromEdge = false;
         return;
       }
       startX = event.touches[0].clientX;
       startY = event.touches[0].clientY;
-      tracking = true;
+      trackingFromEdge = startX <= BACK_SWIPE_EDGE_PX;
     };
 
     const onTouchEnd = (event: TouchEvent) => {
-      if (!tracking) return;
-      tracking = false;
+      if (!trackingFromEdge) return;
+      trackingFromEdge = false;
 
       const endX = event.changedTouches[0].clientX;
       const endY = event.changedTouches[0].clientY;
       const dx = endX - startX;
       const dy = endY - startY;
 
-      // Only left swipe triggers navigation.
-      if (dx > 0) return;
-      if (Math.abs(dx) < 90) return;
-      if (Math.abs(dx) <= Math.abs(dy) * 1.15) return;
+      // iOS-style: start at left edge, swipe right to go back.
+      if (dx <= 0) return;
+      if (dx < BACK_SWIPE_MIN_DX) return;
+      if (dx <= Math.abs(dy) * 1.15) return;
 
       if (history.length > 1) {
         history.goBack();
+      } else {
+        history.replace('/home');
       }
     };
 
@@ -110,6 +118,62 @@ const GlobalLeftSwipeBack = () => {
     };
   }, [history, location.pathname]);
 
+  return null;
+};
+
+/**
+ * Routes whose top-of-screen artwork is dark/video and therefore need
+ * light (white) status-bar content. Every other route defaults to dark
+ * content because the rest of the app is forced to a white background
+ * (see theme/ionic-global.css).
+ */
+const LIGHT_CONTENT_PREFIXES = ['/signup', '/login', '/register', '/auth/google/callback'];
+
+const statusBarStyleForPath = (pathname: string): AppStatusBarStyle => {
+  for (const prefix of LIGHT_CONTENT_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      return 'light-content';
+    }
+  }
+  return 'dark-content';
+};
+
+/**
+ * Drives the iOS / Android status-bar style from the current route on every
+ * navigation. This guarantees the bar is correct after page transitions,
+ * swipe-back gestures, hardware back, deep links, and bottom-tab switches —
+ * without each page having to remember to set it.
+ *
+ * Pages may still call `useStatusBarStyle(...)` directly to override locally
+ * (e.g. a temporarily dark hero image inside an otherwise light page).
+ */
+const StatusBarController = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    void applyStatusBarStyle(statusBarStyleForPath(location.pathname));
+  }, [location.pathname]);
+
+  return null;
+};
+
+/** Native: sync “today’s classes” local notifications from weekly schedule in localStorage */
+const ClassNotificationSync = () => {
+  useEffect(() => {
+    const sync = () => requestTodaysClassNotificationsSync();
+    sync();
+    window.addEventListener('weeklyScheduleUpdated', sync);
+    window.addEventListener('focus', sync);
+    const onVis = () => {
+      if (!document.hidden) sync();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('weeklyScheduleUpdated', sync);
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
   return null;
 };
 
@@ -158,9 +222,11 @@ const App: React.FC = () => {
           <AuthProvider>
             <StreakActivityTracker />
             <GlobalLeftSwipeBack />
+            <StatusBarController />
+            <ClassNotificationSync />
             <SubscriptionProvider>
               <PlanProvider>
-                <IonRouterOutlet swipeGesture={false}>
+                <IonRouterOutlet>
                 {/* Public Routes */}
                 <Route exact path="/splash">
                   <Splash />

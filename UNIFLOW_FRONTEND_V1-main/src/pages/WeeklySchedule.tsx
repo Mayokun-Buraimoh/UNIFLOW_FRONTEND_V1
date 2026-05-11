@@ -274,7 +274,12 @@ const WeeklySchedule: React.FC = () => {
       
       setTimeSlots(newTimeSlots);
       localStorage.setItem('weeklyTimeSlots', JSON.stringify(newTimeSlots));
-      
+      try {
+        window.dispatchEvent(new Event('weeklyScheduleUpdated'));
+      } catch {
+        /* noop */
+      }
+
       setTimeout(() => {
         setIsLoading(false);
         setShowTimeEditModal(false);
