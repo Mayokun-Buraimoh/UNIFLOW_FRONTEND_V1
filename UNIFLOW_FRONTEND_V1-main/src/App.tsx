@@ -207,7 +207,9 @@ import './theme/transitions.css';
 /* Ionic global styles */
 import './theme/ionic-global.css';
 
-setupIonicReact();
+setupIonicReact({
+  swipeBackEnabled: false,
+});
 
 const App: React.FC = () => {
   return (
@@ -221,7 +223,7 @@ const App: React.FC = () => {
             <ClassNotificationSync />
             <SubscriptionProvider>
               <PlanProvider>
-                <IonRouterOutlet swipeGesture={false}>
+                <IonRouterOutlet>
                 {/* Public Routes */}
                 <Route exact path="/splash">
                   <Splash />
