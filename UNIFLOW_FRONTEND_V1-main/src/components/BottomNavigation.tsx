@@ -5,7 +5,11 @@ import { useLongPress } from '../hooks/useLongPress';
 import VoiceAssistantOverlay, { type AssistantPhase } from './voice-assistant/VoiceAssistantOverlay';
 import './BottomNavigation.css';
 
-const BottomNavigation: React.FC = () => {
+interface BottomNavigationProps {
+  voiceOnboardingActive?: boolean;
+}
+
+const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActive = false }) => {
   const ionRouter = useIonRouter();
   const history = useHistory();
   const location = useLocation();
@@ -146,6 +150,7 @@ const BottomNavigation: React.FC = () => {
           ref={centralChatRef}
           className={[
             'nav-item central',
+            voiceOnboardingActive && 'voice-onboarding-highlight',
             voiceAssistantOpen && 'voice-hub--active',
             voiceAssistantOpen && `voice-hub--phase-${voicePhase}`,
             voiceAssistantOpen && voiceClosing && 'voice-hub--closing'

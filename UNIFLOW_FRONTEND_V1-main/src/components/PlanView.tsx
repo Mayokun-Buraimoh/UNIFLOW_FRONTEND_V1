@@ -1,8 +1,9 @@
 import React from 'react';
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { arrowBack } from 'ionicons/icons';
 import './PlanView.css';
+import { navigateBackSafely } from '../utils/navigation';
 
 interface PlanViewProps {
   plan: {
@@ -17,6 +18,7 @@ interface PlanViewProps {
 
 const PlanView: React.FC<PlanViewProps> = ({ plan, onClose }) => {
   const history = useHistory();
+  const location = useLocation();
 
   return (
     <IonPage>
@@ -27,7 +29,10 @@ const PlanView: React.FC<PlanViewProps> = ({ plan, onClose }) => {
           
           {/* Header */}
           <div className="plan-header">
-            <button className="back-button" onClick={() => onClose ? onClose() : history.goBack()}>
+            <button
+              className="back-button"
+              onClick={() => (onClose ? onClose() : navigateBackSafely(history, location.pathname, '/plans'))}
+            >
               <IonIcon icon={arrowBack} />
             </button>
             <h1 className="plan-title">{plan.title}</h1>

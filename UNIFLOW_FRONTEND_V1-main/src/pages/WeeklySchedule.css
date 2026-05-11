@@ -37,7 +37,7 @@ body.weekly-schedule-white ion-page {
 
 /* Status Bar Spacer */
 .status-bar-spacer {
-  height: 60px;
+  height: max(24px, env(safe-area-inset-top, 0px));
   width: 100%;
   background: #ffffff;
 }
@@ -337,7 +337,7 @@ body.weekly-schedule-white ion-page {
 
 /* Status Bar Spacer */
 .status-bar-spacer {
-  height: 60px;
+  height: max(24px, env(safe-area-inset-top, 0px));
   background: #ffffff;
 }
 

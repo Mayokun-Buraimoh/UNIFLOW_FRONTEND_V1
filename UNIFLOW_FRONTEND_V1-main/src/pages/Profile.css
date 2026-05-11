@@ -12,11 +12,11 @@
 .profile-screen .status-bar-spacer,
 ion-content.profile-screen .status-bar-spacer,
 .profile-screen div.status-bar-spacer {
-  height: 60px !important; /* Space for device status bar */
+  height: max(24px, env(safe-area-inset-top, 0px)) !important;
   width: 100% !important;
   background: #ffffff !important;
-  min-height: 60px !important;
-  max-height: 60px !important;
+  min-height: max(24px, env(safe-area-inset-top, 0px)) !important;
+  max-height: max(24px, env(safe-area-inset-top, 0px)) !important;
 }
 
 

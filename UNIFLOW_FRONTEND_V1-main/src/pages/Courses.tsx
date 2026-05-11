@@ -225,7 +225,7 @@ const Courses: React.FC = () => {
         >
 
           <div className="courses-header-new">
-            <BackButton />
+            <BackButton to="/home" />
             {!isSearching ? (
               <h1 className="title-text">Courses</h1>
             ) : (

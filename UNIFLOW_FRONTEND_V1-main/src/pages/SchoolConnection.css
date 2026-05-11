@@ -8,7 +8,7 @@
 
 /* Status Bar Spacer */
 .school-connection-screen .status-bar-spacer {
-  height: 60px;
+  height: max(24px, env(safe-area-inset-top, 0px));
   width: 100%;
   background: #ffffff;
 }

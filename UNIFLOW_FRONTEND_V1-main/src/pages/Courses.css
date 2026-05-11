@@ -11,7 +11,7 @@
   flex-direction: column;
   background-color: #ffffff;
   position: relative;
-  padding-top: 50px;
+  padding-top: max(24px, env(safe-area-inset-top, 0px));
   /* Safe area inset approximations */
 }
 
@@ -23,8 +23,8 @@
   justify-content: flex-end;
   /* Align right side default */
   position: relative;
-  height: 60px;
-  padding: 0 24px;
+  height: 54px;
+  padding: 0 20px;
   z-index: 101;
   /* Keep above overlay */
 }

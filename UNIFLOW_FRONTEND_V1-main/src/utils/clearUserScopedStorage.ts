@@ -37,6 +37,7 @@ const EXACT_KEYS_TO_REMOVE = [
   'uniflow_last_active_time',
   'uniflow_local_profile_picture',
   'uniflow_has_seen_schedule_onboarding',
+  'uniflow_has_seen_voice_onboarding',
 ];
 
 function shouldRemoveKey(key: string): boolean {

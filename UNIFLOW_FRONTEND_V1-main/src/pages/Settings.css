@@ -29,13 +29,13 @@ ion-page {
 
 /* Status Bar Spacer */
 .status-bar-spacer {
-  height: 44px;
+  height: max(24px, env(safe-area-inset-top, 0px));
   background-color: #ffffff !important;
 }
 
 .settings-body {
   background: #ffffff !important;
-  min-height: calc(100vh - 44px);
+  min-height: calc(100vh - max(24px, env(safe-area-inset-top, 0px)));
   padding-bottom: 28px;
 }
 

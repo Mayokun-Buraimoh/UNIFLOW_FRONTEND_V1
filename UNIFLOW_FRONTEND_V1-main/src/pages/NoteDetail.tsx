@@ -22,7 +22,7 @@ import {
   trashOutline,
   paperPlaneOutline
 } from 'ionicons/icons';
-import { useHistory, useParams } from 'react-router-dom';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import { Document, Page, pdfjs } from 'react-pdf';
 import pdfWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { aiClient, ChatMessage } from '../api/aiClient';
@@ -48,6 +48,7 @@ import {
 import { isLocalOnlyFileId, isUuid } from '../utils/uuidUtils';
 import { resolveDjangoAiOrigin } from '../constants/djangoAiPublic';
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
+import { navigateBackSafely } from '../utils/navigation';
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
@@ -135,6 +136,7 @@ const getStickyNotesStorageKey = (fileId: string) => `uniflow_sticky_notes_${fil
 
 const NoteDetail: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
 
@@ -1423,7 +1425,7 @@ const NoteDetail: React.FC = () => {
   };
 
   const handleBack = () => {
-    history.goBack();
+    navigateBackSafely(history, location.pathname, '/courses');
   };
 
   const handleOptionSelect = (index: number) => {
@@ -1624,7 +1626,7 @@ const NoteDetail: React.FC = () => {
               cursor: 'pointer',
               fontSize: 13,
             }}
-            onClick={() => history.goBack()}
+            onClick={handleBack}
           >
             Go back
           </button>
@@ -2224,7 +2226,7 @@ const NoteDetail: React.FC = () => {
                 </div>
 
                 {/* Back to Courses — outside card, prominent red pill */}
-                <button className="nd-qf-courses-btn" onClick={() => history.goBack()}>
+                <button className="nd-qf-courses-btn" onClick={handleBack}>
                   Back to Courses
                 </button>
 

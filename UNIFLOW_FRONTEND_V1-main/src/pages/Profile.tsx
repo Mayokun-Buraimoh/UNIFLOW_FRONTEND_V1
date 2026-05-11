@@ -11,14 +11,15 @@ import BackButton from '../components/BackButton';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
 
 const Profile: React.FC = () => {
+  const DEFAULT_AVATAR = '/assets/icons/Avatars/default.jpg';
   const history = useHistory();
   const { user, logoutWithConfirmation, updateProfile, changePassword, refreshUser } = useAuth();
   const { profile, loading: profileLoading, updateProfile: updateProfileSettings } = useProfile();
   
-  const [currentAvatar, setCurrentAvatar] = useState('/assets/icons/Avatars/default.jpg');
+  const [currentAvatar, setCurrentAvatar] = useState(DEFAULT_AVATAR);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
-  const [selectedAvatar, setSelectedAvatar] = useState('/assets/icons/Avatars/default.jpg');
+  const [selectedAvatar, setSelectedAvatar] = useState(DEFAULT_AVATAR);
   const [avatarSaving, setAvatarSaving] = useState(false);
 
   // Form field states
@@ -37,10 +38,9 @@ const Profile: React.FC = () => {
     if (profile) {
       setSchool(profile.school || 'Covenant University');
       setPhoneNumber(profile.phoneNumber || '+234 123 456 7890');
-      if (profile.profilePicture) {
-        setCurrentAvatar(profile.profilePicture);
-        setSelectedAvatar(profile.profilePicture);
-      }
+      const resolvedAvatar = profile.profilePicture || DEFAULT_AVATAR;
+      setCurrentAvatar(resolvedAvatar);
+      setSelectedAvatar(resolvedAvatar);
     }
   }, [profile]);
   
@@ -72,16 +72,19 @@ const Profile: React.FC = () => {
 
   const handleUpdateAvatar = async () => {
     if (avatarSaving) return;
+    const previousAvatar = currentAvatar;
+    const nextAvatar = selectedAvatar || DEFAULT_AVATAR;
+    // Optimistic update so avatar switches instantly in the UI.
+    setCurrentAvatar(nextAvatar);
     setAvatarSaving(true);
     try {
-      await updateProfileSettings({ profilePicture: selectedAvatar });
-      setCurrentAvatar(selectedAvatar);
+      await updateProfileSettings({ profilePicture: nextAvatar });
       setIsAvatarModalOpen(false);
       setIsConfirmationModalOpen(true);
     } catch (error) {
       console.error('Failed to save avatar:', error);
-      writeStoredProfilePicture(selectedAvatar);
-      setCurrentAvatar(selectedAvatar);
+      writeStoredProfilePicture(nextAvatar);
+      setCurrentAvatar(previousAvatar);
       setIsAvatarModalOpen(false);
       setIsConfirmationModalOpen(true);
       window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));

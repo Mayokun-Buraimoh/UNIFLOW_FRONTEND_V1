@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
+import { navigateBackSafely } from '../utils/navigation';
 
 /**
  * Custom hook to allow swipe-to-back functionality on pages without a dedicated back button.
@@ -7,6 +8,7 @@ import { useHistory } from 'react-router-dom';
  */
 export function useSwipeBack(enabled = true, threshold = 90) {
     const history = useHistory();
+    const location = useLocation();
 
     useEffect(() => {
         if (!enabled) return;
@@ -38,12 +40,7 @@ export function useSwipeBack(enabled = true, threshold = 90) {
             // Only keep the intended left-swipe-back gesture.
             if (dx < -threshold) {
                 isSweeping = false; // prevent multiple triggers
-                // ensure there is a history to go back to instead of forcing an exit
-                if (history.length > 1) {
-                    history.goBack();
-                } else {
-                    history.push('/home'); // Fallback if no history
-                }
+                navigateBackSafely(history, location.pathname, '/home');
             }
         };
 
@@ -60,5 +57,5 @@ export function useSwipeBack(enabled = true, threshold = 90) {
             document.removeEventListener('touchmove', handleTouchMove);
             document.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [history, threshold, enabled]);
+    }, [history, location.pathname, threshold, enabled]);
 }

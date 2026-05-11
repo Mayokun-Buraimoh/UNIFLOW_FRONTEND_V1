@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { IonPage, IonContent, IonModal, IonHeader, IonToolbar, IonTitle, IonContent as IonModalContent, IonItem, IonLabel, IonInput, IonButtons, IonButton } from '@ionic/react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 
 import './WeeklySchedule.css';
 import BackButton from '../components/BackButton';
@@ -13,9 +13,11 @@ import {
   parseTimeSlotRangeMinutes,
 } from '../utils/weeklyScheduleTime';
 import { updateLocalFirst } from '../localfirst/syncQueue';
+import { navigateBackSafely } from '../utils/navigation';
 
 const WeeklySchedule: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const [isEditMode, setIsEditMode] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCell, setEditingCell] = useState<{day: string, timeIndex: number} | null>(null);
@@ -71,7 +73,7 @@ const WeeklySchedule: React.FC = () => {
   }, []);
 
   const handleBackClick = () => {
-    history.goBack();
+    navigateBackSafely(history, location.pathname, '/home');
   };
 
   const handleEditClick = () => {

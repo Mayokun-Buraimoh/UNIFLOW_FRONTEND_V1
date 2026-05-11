@@ -1,5 +1,5 @@
 import { IonContent, IonPage } from '@ionic/react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfile } from '../hooks/useProfile';
@@ -9,9 +9,11 @@ import './AppPreferences.css';
 import BackButton from '../components/BackButton';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
 import { writeCachedAppPreferences, type WeekStartPreference } from '../utils/appPreferences';
+import { navigateBackSafely } from '../utils/navigation';
 
 const AppPreferences: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const { user } = useAuth();
   const { profile, updatePreferences, loading } = useProfile();
   const { t, i18n } = useTranslation();
@@ -74,7 +76,7 @@ const AppPreferences: React.FC = () => {
         weekStart: weekStart as WeekStartPreference,
       });
       console.log('App preferences updated successfully');
-      history.goBack();
+      navigateBackSafely(history, location.pathname, '/settings');
     } catch (error) {
       console.error('Failed to update app preferences:', error);
     } finally {

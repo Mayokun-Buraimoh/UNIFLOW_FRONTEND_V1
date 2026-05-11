@@ -15,25 +15,25 @@ import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
 import { useStatusBarStyle } from '../hooks/useStatusBarStyle';
 
 const Settings: React.FC = () => {
+  const DEFAULT_AVATAR = '/assets/icons/Avatars/default.jpg';
   const history = useHistory();
   const ionRouter = useIonRouter();
   const { user, logoutWithConfirmation, logout } = useAuth();
   const { profile, updateProfile: saveProfile } = useProfile();
   const { t } = useTranslation();
 
-  const [currentAvatar, setCurrentAvatar] = useState('/assets/icons/Avatars/default.jpg');
+  const [currentAvatar, setCurrentAvatar] = useState(DEFAULT_AVATAR);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedAvatar, setSelectedAvatar] = useState('/assets/icons/Avatars/default.jpg');
+  const [selectedAvatar, setSelectedAvatar] = useState(DEFAULT_AVATAR);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
-    if (profile?.profilePicture) {
-      setCurrentAvatar(profile.profilePicture);
-      setSelectedAvatar(profile.profilePicture);
-    }
+    const resolvedAvatar = profile?.profilePicture || DEFAULT_AVATAR;
+    setCurrentAvatar(resolvedAvatar);
+    setSelectedAvatar(resolvedAvatar);
   }, [profile]);
 
   useBlockRightSwipe();
@@ -54,16 +54,19 @@ const Settings: React.FC = () => {
 
   const handleUpdateAvatar = async () => {
     if (avatarSaving) return;
+    const previousAvatar = currentAvatar;
+    const nextAvatar = selectedAvatar || DEFAULT_AVATAR;
+    // Optimistic update so avatar changes immediately in the UI.
+    setCurrentAvatar(nextAvatar);
     setAvatarSaving(true);
     try {
-      await saveProfile({ profilePicture: selectedAvatar });
-      setCurrentAvatar(selectedAvatar);
+      await saveProfile({ profilePicture: nextAvatar });
       setIsAvatarModalOpen(false);
       setIsConfirmationModalOpen(true);
     } catch (error) {
       console.error('Failed to save avatar:', error);
-      writeStoredProfilePicture(selectedAvatar);
-      setCurrentAvatar(selectedAvatar);
+      writeStoredProfilePicture(nextAvatar);
+      setCurrentAvatar(previousAvatar);
       setIsAvatarModalOpen(false);
       setIsConfirmationModalOpen(true);
       window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));

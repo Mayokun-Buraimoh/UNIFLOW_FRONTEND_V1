@@ -37,6 +37,7 @@ import { useStreak } from './hooks/useStreak';
 import { initializeLocalFirstSync } from './localfirst/syncQueue';
 import { requestTodaysClassNotificationsSync } from './services/scheduleClassNotifications';
 import { applyStatusBarStyle, type AppStatusBarStyle } from './utils/statusBar';
+import { navigateBackSafely } from './utils/navigation';
 const RootRoute = () => {
   const { loading } = useAuth();
 
@@ -55,7 +56,6 @@ const StreakActivityTracker = () => {
   return null;
 };
 
-const BACK_SWIPE_EDGE_PX = 40;
 const BACK_SWIPE_MIN_DX = 90;
 
 const GlobalLeftSwipeBack = () => {
@@ -67,8 +67,7 @@ const GlobalLeftSwipeBack = () => {
 
     let startX = 0;
     let startY = 0;
-    /** True only when touch began near the left edge (iOS-style interactive pop). */
-    let trackingFromEdge = false;
+    let tracking = false;
 
     const shouldIgnoreTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) return false;
@@ -80,33 +79,29 @@ const GlobalLeftSwipeBack = () => {
 
     const onTouchStart = (event: TouchEvent) => {
       if (shouldIgnoreTarget(event.target)) {
-        trackingFromEdge = false;
+        tracking = false;
         return;
       }
       startX = event.touches[0].clientX;
       startY = event.touches[0].clientY;
-      trackingFromEdge = startX <= BACK_SWIPE_EDGE_PX;
+      tracking = true;
     };
 
     const onTouchEnd = (event: TouchEvent) => {
-      if (!trackingFromEdge) return;
-      trackingFromEdge = false;
+      if (!tracking) return;
+      tracking = false;
 
       const endX = event.changedTouches[0].clientX;
       const endY = event.changedTouches[0].clientY;
       const dx = endX - startX;
       const dy = endY - startY;
 
-      // iOS-style: start at left edge, swipe right to go back.
-      if (dx <= 0) return;
-      if (dx < BACK_SWIPE_MIN_DX) return;
-      if (dx <= Math.abs(dy) * 1.15) return;
+      // App rule: only left swipe (right-to-left) should trigger back.
+      if (dx >= 0) return;
+      if (Math.abs(dx) < BACK_SWIPE_MIN_DX) return;
+      if (Math.abs(dx) <= Math.abs(dy) * 1.15) return;
 
-      if (history.length > 1) {
-        history.goBack();
-      } else {
-        history.replace('/home');
-      }
+      navigateBackSafely(history, location.pathname, '/home');
     };
 
     document.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -226,7 +221,7 @@ const App: React.FC = () => {
             <ClassNotificationSync />
             <SubscriptionProvider>
               <PlanProvider>
-                <IonRouterOutlet>
+                <IonRouterOutlet swipeGesture={false}>
                 {/* Public Routes */}
                 <Route exact path="/splash">
                   <Splash />

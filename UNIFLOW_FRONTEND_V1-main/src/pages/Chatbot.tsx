@@ -3,12 +3,12 @@ import { micOutline, attachOutline, searchOutline, createOutline, paperPlaneOutl
 import { IonIcon } from "@ionic/react";
 import { useState, useRef, useEffect } from "react";
 import { flushSync } from "react-dom";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import "./Chatbot.css";
 import { aiClient, ChatMessage, ChatHistory } from "../api/aiClient";
 import { useAuth } from "../contexts/AuthContext";
 import BackButton from "../components/BackButton";
-import { getDefaultStartPath } from "../utils/appPreferences";
+import { navigateBackSafely } from "../utils/navigation";
 
 interface Attachment {
   id: string;
@@ -17,15 +17,8 @@ interface Attachment {
 
 export default function Chatbot() {
   const history = useHistory();
+  const location = useLocation();
   const { user } = useAuth();
-
-  const navigateBackSafely = () => {
-    if (history.length > 1) {
-      history.goBack();
-      return;
-    }
-    history.replace(getDefaultStartPath());
-  };
 
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -317,7 +310,7 @@ export default function Chatbot() {
               setIsHistoryOpen(false);
             } else {
               flushSync(() => setIsHistoryOpen(false));
-              navigateBackSafely();
+              navigateBackSafely(history, location.pathname);
             }
           }}
         />

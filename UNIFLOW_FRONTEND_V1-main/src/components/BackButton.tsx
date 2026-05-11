@@ -3,7 +3,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { IonIcon } from '@ionic/react';
 import { arrowBackOutline } from 'ionicons/icons';
 import './BackButton.css';
-import { getDefaultStartPath } from '../utils/appPreferences';
+import { navigateBackSafely } from '../utils/navigation';
 
 interface BackButtonProps {
     onClick?: () => void;
@@ -27,21 +27,6 @@ const BackButton: React.FC<BackButtonProps> = ({
     const history = useHistory();
     const location = useLocation();
 
-    const getFallbackPath = () => {
-        const pathname = location.pathname;
-        if (pathname === '/login' || pathname === '/register') return '/signup';
-        if (pathname === '/signup') return '/onboarding2';
-        if (pathname === '/onboarding2') return '/onboarding';
-        if (pathname === '/onboarding') return '/splash';
-        const defaultPath = getDefaultStartPath();
-        // Bottom nav uses `root` + `replace`, so stack depth is often 1. If the user's
-        // default start page equals the current route, `replace(default)` would no-op.
-        if (defaultPath === pathname) {
-            return '/home';
-        }
-        return defaultPath;
-    };
-
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (to) {
@@ -49,11 +34,7 @@ const BackButton: React.FC<BackButtonProps> = ({
         } else if (onClick) {
             onClick();
         } else {
-            if (history.length > 1) {
-                history.goBack();
-            } else {
-                history.replace(getFallbackPath());
-            }
+            navigateBackSafely(history, location.pathname);
         }
     };
 

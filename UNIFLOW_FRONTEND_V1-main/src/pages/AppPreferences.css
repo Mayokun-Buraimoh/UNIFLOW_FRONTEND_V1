@@ -14,7 +14,7 @@ html {
 }
 
 .status-bar-spacer {
-  height: 44px;
+  height: max(24px, env(safe-area-inset-top, 0px));
   background-color: #ffffff !important;
 }
 

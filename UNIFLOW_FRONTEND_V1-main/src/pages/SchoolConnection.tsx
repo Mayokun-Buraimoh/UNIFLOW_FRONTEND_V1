@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { IonContent, IonPage, IonButton } from '@ionic/react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { courseService } from '../api/services';
 import './SchoolConnection.css';
 import BackButton from '../components/BackButton';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
+import { navigateBackSafely } from '../utils/navigation';
 
 const SchoolConnection: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const [schoolUrl, setSchoolUrl] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
@@ -45,7 +47,7 @@ const SchoolConnection: React.FC = () => {
   };
 
   const handleBack = () => {
-    history.goBack();
+    navigateBackSafely(history, location.pathname, '/courses');
   };
 
   return (

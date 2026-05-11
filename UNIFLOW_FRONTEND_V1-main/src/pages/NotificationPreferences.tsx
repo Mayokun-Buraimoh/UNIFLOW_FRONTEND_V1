@@ -1,6 +1,6 @@
 import { IonContent, IonPage } from '@ionic/react';
 import { useState, useEffect } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import './NotificationPreferences.css';
@@ -8,9 +8,11 @@ import { NotificationService, STREAK_NOTIF_PREF_KEY } from '../services/Notifica
 import { PUSH_MASTER_PREF_KEY, requestTodaysClassNotificationsSync } from '../services/scheduleClassNotifications';
 import BackButton from '../components/BackButton';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
+import { navigateBackSafely } from '../utils/navigation';
 
 const NotificationPreferences: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const { user } = useAuth();
   const { profile, updateNotificationSettings, loading } = useProfile();
   
@@ -55,7 +57,7 @@ const NotificationPreferences: React.FC = () => {
       void NotificationService.syncStreakInactivityReminder();
       requestTodaysClassNotificationsSync();
       console.log('Notification preferences updated successfully');
-      history.goBack();
+      navigateBackSafely(history, location.pathname, '/settings');
     } catch (error) {
       console.error('Failed to update notification preferences:', error);
     } finally {

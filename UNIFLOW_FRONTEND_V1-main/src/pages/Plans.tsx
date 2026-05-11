@@ -62,7 +62,7 @@ const Plans: React.FC = () => {
 
             {/* Header */}
             <div className="plans-header">
-                <BackButton />
+                <BackButton to="/home" />
                 {!isSearching ? (
                     <h1 className="plans-title">Plans</h1>
                 ) : (
@@ -122,8 +122,10 @@ const Plans: React.FC = () => {
             {/* Content */}
             <div className="plans-content" onClick={() => { clearLongPressState(); }}>
                 {displayPlans.length === 0 ? (
-                    <div className="empty-state">
-                        <p>{searchQuery ? "No plans match your search" : "Tap the + button above to create your first plan"}</p>
+                    <div className="plans-empty-state">
+                        <p className="plans-empty-state-text">
+                            {searchQuery ? "No plans match your search" : "Tap the + button above to create your first plan"}
+                        </p>
                     </div>
                 ) : (
                     <div className="plans-list">

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, UIEvent } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import './GlassyTimePicker.css';
 
 interface GlassyTimePickerProps {
@@ -7,32 +7,35 @@ interface GlassyTimePickerProps {
   placeholder?: string;
 }
 
-const hours12 = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+const hours24 = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const minutes60 = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
-function parseTime12(value: string): { hour: string; minute: string; period: 'AM' | 'PM' } {
-  if (!value) return { hour: '12', minute: '00', period: 'AM' };
-  
-  // Try to parse "14:30" or "02:30 PM" gracefully if it exists
-  const isPM = /PM/i.test(value);
-  const isAM = /AM/i.test(value);
+function parseTime24(value: string): { hour: string; minute: string } {
+  if (!value) return { hour: '00', minute: '00' };
+
+  const hasPM = /PM/i.test(value);
+  const hasAM = /AM/i.test(value);
   const timePart = value.replace(/[^\d:]/g, '');
   const [hStr, mStr] = timePart.split(':');
-  
+
   let h = parseInt(hStr, 10);
   let m = parseInt(mStr, 10);
-  if (isNaN(h)) h = 12;
+  if (isNaN(h)) h = 0;
   if (isNaN(m)) m = 0;
-  
-  let period: 'AM' | 'PM' = isPM ? 'PM' : (isAM ? 'AM' : (h >= 12 ? 'PM' : 'AM'));
-  
-  if (h > 12) h -= 12;
-  if (h === 0) h = 12;
-  
-  return { 
-    hour: String(h).padStart(2, '0'), 
-    minute: String(Math.min(59, Math.max(0, m))).padStart(2, '0'),
-    period
+
+  // Backward-compatible parsing if old 12-hour values are still present.
+  if (hasAM || hasPM) {
+    h = Math.min(12, Math.max(1, h));
+    if (hasPM && h < 12) h += 12;
+    if (hasAM && h === 12) h = 0;
+  }
+
+  h = Math.min(23, Math.max(0, h));
+  m = Math.min(59, Math.max(0, m));
+
+  return {
+    hour: String(h).padStart(2, '0'),
+    minute: String(m).padStart(2, '0'),
   };
 }
 
@@ -49,18 +52,32 @@ const Wheel = ({
   const isScrollingInternal = useRef(false);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ITEM_HEIGHT = 52;
+  const LOOP_MULTIPLIER = 24;
+  const SAFE_EDGE_CYCLES = 2;
+  const middleCycle = Math.floor(LOOP_MULTIPLIER / 2);
 
-  useEffect(() => {
+  const virtualItems = useMemo(
+    () => Array.from({ length: items.length * LOOP_MULTIPLIER }, (_, i) => items[i % items.length]),
+    [items]
+  );
+
+  const normalizeIndex = (index: number) => {
+    return ((index % items.length) + items.length) % items.length;
+  };
+
+  const getMiddleIndexForValue = (val: string) => {
+    const baseIndex = items.indexOf(val);
+    const safeBase = baseIndex >= 0 ? baseIndex : 0;
+    return middleCycle * items.length + safeBase;
+  };
+
+  useLayoutEffect(() => {
     if (!isScrollingInternal.current && scrollRef.current) {
-      const idx = items.indexOf(value);
-      if (idx !== -1) {
-        const targetTop = idx * ITEM_HEIGHT;
-        if (Math.abs(scrollRef.current.scrollTop - targetTop) > 5) {
-          scrollRef.current.scrollTo({
-            top: targetTop,
-            behavior: 'smooth'
-          });
-        }
+      const targetIndex = getMiddleIndexForValue(value);
+      const targetTop = targetIndex * ITEM_HEIGHT;
+      if (Math.abs(scrollRef.current.scrollTop - targetTop) > 5) {
+        // Hard snap to selected value to avoid opening "spin" animation.
+        scrollRef.current.scrollTop = targetTop;
       }
     }
   }, [value, items]);
@@ -70,11 +87,22 @@ const Wheel = ({
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
 
     const scrollTop = e.currentTarget.scrollTop;
+    const rawIndex = Math.round(scrollTop / ITEM_HEIGHT);
+    const normalizedIndex = normalizeIndex(rawIndex);
+    const selectedValue = items[normalizedIndex];
+
+    const minSafeIndex = SAFE_EDGE_CYCLES * items.length;
+    const maxSafeIndex = (LOOP_MULTIPLIER - SAFE_EDGE_CYCLES) * items.length;
+
+    // Recenter quietly to keep scrolling infinite without ever hitting list edges.
+    if (rawIndex < minSafeIndex || rawIndex > maxSafeIndex) {
+      const recenteredIndex = middleCycle * items.length + normalizedIndex;
+      e.currentTarget.scrollTop = recenteredIndex * ITEM_HEIGHT;
+    }
     
     scrollTimeout.current = setTimeout(() => {
-      const index = Math.round(scrollTop / ITEM_HEIGHT);
-      if (items[index] && items[index] !== value) {
-        onChange(items[index]);
+      if (selectedValue && selectedValue !== value) {
+        onChange(selectedValue);
       }
       setTimeout(() => {
         isScrollingInternal.current = false;
@@ -85,9 +113,9 @@ const Wheel = ({
   return (
     <div className="gtp-wheel" ref={scrollRef} onScroll={handleScroll}>
       <div className="gtp-wheel-spacer" />
-      {items.map((item) => (
+      {virtualItems.map((item, index) => (
         <div
-          key={item}
+          key={`${item}-${index}`}
           className={`gtp-wheel-item ${item === value ? 'gtp-wheel-item--active' : ''}`}
           onClick={() => {
             if (!isScrollingInternal.current) onChange(item);
@@ -102,24 +130,22 @@ const Wheel = ({
 };
 
 const GlassyTimePicker: React.FC<GlassyTimePickerProps> = ({ value, onChange, placeholder = 'Select time' }) => {
-  const parsed = parseTime12(value);
+  const parsed = parseTime24(value);
   const [open, setOpen] = useState(false);
   
   const [hour, setHour] = useState(parsed.hour);
   const [minute, setMinute] = useState(parsed.minute);
-  const [period, setPeriod] = useState<'AM' | 'PM'>(parsed.period);
   const [inputValue, setInputValue] = useState('');
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const p = parseTime12(value);
+    const p = parseTime24(value);
     setHour(p.hour);
     setMinute(p.minute);
-    setPeriod(p.period);
     if (!open) {
-      setInputValue(`${p.hour}:${p.minute} ${p.period}`);
+      setInputValue(`${p.hour}:${p.minute}`);
     }
   }, [value, open]);
 
@@ -132,10 +158,10 @@ const GlassyTimePicker: React.FC<GlassyTimePickerProps> = ({ value, onChange, pl
     };
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
-  }, [open, hour, minute, period, onChange, inputValue]);
+  }, [open, hour, minute, onChange, inputValue]);
 
   const handleConfirm = () => {
-    const formatted = `${hour}:${minute} ${period}`;
+    const formatted = `${hour}:${minute}`;
     onChange(formatted);
     setInputValue(formatted);
     setOpen(false);
@@ -170,7 +196,7 @@ const GlassyTimePicker: React.FC<GlassyTimePickerProps> = ({ value, onChange, pl
     }
 
     // Preserve the visual mask
-    setInputValue(`${formatted} ${period}`);
+    setInputValue(formatted);
 
     // 5. Update state only if complete
     if (formatted.length === 5) {
@@ -178,22 +204,14 @@ const GlassyTimePicker: React.FC<GlassyTimePickerProps> = ({ value, onChange, pl
       const finalM = formatted.slice(3, 5);
       setHour(finalH);
       setMinute(finalM);
-      onChange(`${finalH}:${finalM} ${period}`);
+      onChange(`${finalH}:${finalM}`);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Quickly listen for 'A' or 'P' to flip period safely
-    if (e.key.toLowerCase() === 'a') {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      setPeriod('AM');
-      setInputValue(`${inputValue.split(' ')[0]} AM`);
-      if (inputValue.split(' ')[0].length === 5) onChange(`${inputValue.split(' ')[0]} AM`);
-    } else if (e.key.toLowerCase() === 'p') {
-      e.preventDefault();
-      setPeriod('PM');
-      setInputValue(`${inputValue.split(' ')[0]} PM`);
-      if (inputValue.split(' ')[0].length === 5) onChange(`${inputValue.split(' ')[0]} PM`);
+      handleConfirm();
     }
   };
 
@@ -218,7 +236,7 @@ const GlassyTimePicker: React.FC<GlassyTimePickerProps> = ({ value, onChange, pl
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          maxLength={8}
+          maxLength={5}
           onFocus={() => setOpen(true)}
         />
 
@@ -244,27 +262,9 @@ const GlassyTimePicker: React.FC<GlassyTimePickerProps> = ({ value, onChange, pl
 
             <div className="gtp-wheels-container">
               <div className="gtp-wheel-highlight" />
-              <Wheel items={hours12} value={hour} onChange={(val) => { setHour(val); onChange(`${val}:${minute} ${period}`); }} />
+              <Wheel items={hours24} value={hour} onChange={(val) => { setHour(val); onChange(`${val}:${minute}`); }} />
               <span className="gtp-colon">:</span>
-              <Wheel items={minutes60} value={minute} onChange={(val) => { setMinute(val); onChange(`${hour}:${val} ${period}`); }} />
-            </div>
-
-            <div className="gtp-period-segmented">
-              <div className={`gtp-period-slider ${period === 'PM' ? 'pm' : ''}`} />
-              <button
-                type="button"
-                className={`gtp-period-btn ${period === 'AM' ? 'gtp-period-btn--active' : ''}`}
-                onClick={() => { setPeriod('AM'); onChange(`${hour}:${minute} AM`); }}
-              >
-                AM
-              </button>
-              <button
-                type="button"
-                className={`gtp-period-btn ${period === 'PM' ? 'gtp-period-btn--active' : ''}`}
-                onClick={() => { setPeriod('PM'); onChange(`${hour}:${minute} PM`); }}
-              >
-                PM
-              </button>
+              <Wheel items={minutes60} value={minute} onChange={(val) => { setMinute(val); onChange(`${hour}:${val}`); }} />
             </div>
 
             <button type="button" className="gtp-confirm-btn" onClick={handleConfirm}>

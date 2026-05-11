@@ -1,4 +1,4 @@
-import { IonContent, IonPage, IonButton } from '@ionic/react';
+import { IonContent, IonPage, IonButton, IonToast } from '@ionic/react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +19,11 @@ type HomeLocationState = {
   openCalendarForEventId?: string;
 };
 
+type HomeOnboardingStep = 'schedule' | 'voice' | null;
+
 const Home: React.FC = () => {
+  const SCHEDULE_ONBOARDING_KEY = 'uniflow_has_seen_schedule_onboarding';
+  const VOICE_ONBOARDING_KEY = 'uniflow_has_seen_voice_onboarding';
   const history = useHistory();
   const location = useLocation<HomeLocationState>();
   const { user, logoutWithConfirmation, refreshUser } = useAuth();
@@ -84,7 +88,7 @@ const Home: React.FC = () => {
   // UI Enhancement states
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState<HomeOnboardingStep>(null);
 
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [todayClassesCount, setTodayClassesCount] = useState<number>(0);
@@ -94,6 +98,8 @@ const Home: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [eventTitle, setEventTitle] = useState('');
   const [eventTime, setEventTime] = useState('');
+  const [validationToastOpen, setValidationToastOpen] = useState(false);
+  const [validationToastMessage, setValidationToastMessage] = useState('');
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   // Task states
@@ -209,6 +215,8 @@ const Home: React.FC = () => {
 
   const handleDateClick = (date: Date) => {
     if (isPastCalendarDate(date)) {
+      setValidationToastMessage('Invalid date. Please choose today or a future date.');
+      setValidationToastOpen(true);
       return;
     }
     setSelectedDate(date);
@@ -448,13 +456,16 @@ const Home: React.FC = () => {
 
     computeTodayClassesCount();
 
-    const hasSeenScheduleOnboarding = localStorage.getItem('uniflow_has_seen_schedule_onboarding');
+    const hasSeenScheduleOnboarding = localStorage.getItem(SCHEDULE_ONBOARDING_KEY);
+    const hasSeenVoiceOnboarding = localStorage.getItem(VOICE_ONBOARDING_KEY);
     if (!hasSeenScheduleOnboarding) {
-      setTimeout(() => setShowOnboarding(true), 1000);
+      setTimeout(() => setOnboardingStep('schedule'), 1000);
       // Clear legacy local storage schedule to start completely fresh
       localStorage.removeItem('weeklySchedule');
       localStorage.removeItem('weeklyScheduleVenues');
       computeTodayClassesCount();
+    } else if (!hasSeenVoiceOnboarding) {
+      setTimeout(() => setOnboardingStep('voice'), 800);
     }
 
     const onStorage = (e: StorageEvent) => {
@@ -479,26 +490,45 @@ const Home: React.FC = () => {
     };
   }, []);
 
-  const handleSaveEvent = () => {
-    if (selectedDate && !isPastCalendarDate(selectedDate) && eventTitle && eventTime) {
-      const dateIso = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
-        .toISOString()
-        .slice(0, 10);
-      createBackendEvent({
-          title: eventTitle,
-          time: eventTime,
-          date: dateIso,
-          priority: 'low'
-        })
-        .catch((error) => {
-          console.error('Failed to save event:', error);
-        });
+  const isScheduleOnboarding = onboardingStep === 'schedule';
+  const isVoiceOnboarding = onboardingStep === 'voice';
 
-      setShowEventModal(false);
-      setSelectedDate(null);
-      setEventTitle('');
-      setEventTime('');
+  const advanceFromScheduleOnboarding = () => {
+    localStorage.setItem(SCHEDULE_ONBOARDING_KEY, 'true');
+    setOnboardingStep('voice');
+  };
+
+  const dismissVoiceOnboarding = () => {
+    localStorage.setItem(VOICE_ONBOARDING_KEY, 'true');
+    setOnboardingStep(null);
+  };
+
+  const handleSaveEvent = () => {
+    if (!selectedDate || !eventTitle || !eventTime) return;
+
+    if (isPastCalendarDate(selectedDate)) {
+      setValidationToastMessage('Invalid date. Please choose today or a future date.');
+      setValidationToastOpen(true);
+      return;
     }
+
+    const dateIso = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
+      .toISOString()
+      .slice(0, 10);
+    createBackendEvent({
+        title: eventTitle,
+        time: eventTime,
+        date: dateIso,
+        priority: 'low'
+      })
+      .catch((error) => {
+        console.error('Failed to save event:', error);
+      });
+
+    setShowEventModal(false);
+    setSelectedDate(null);
+    setEventTitle('');
+    setEventTime('');
   };
 
   const handleCloseEventModal = () => {
@@ -548,6 +578,13 @@ const Home: React.FC = () => {
         finalDueDate.setHours(parseInt(hours, 10));
         finalDueDate.setMinutes(parseInt(minutes, 10));
         finalDueDate.setSeconds(0);
+      }
+      finalDueDate.setMilliseconds(0);
+
+      if (!editingId && finalDueDate.getTime() <= Date.now()) {
+        setValidationToastMessage('Invalid time. Please choose a future time for today\'s task.');
+        setValidationToastOpen(true);
+        return;
       }
 
       const taskToSave = {
@@ -765,11 +802,10 @@ const Home: React.FC = () => {
         )}
 
         {/* Metrics Grid */}
-        <div className={`metrics-grid ${showOnboarding ? 'onboarding-active' : ''}`}>
-          <div className={`metric-card ${showOnboarding ? 'onboarding-highlight' : ''}`} onClick={() => {
-            if (showOnboarding) {
-              setShowOnboarding(false);
-              localStorage.setItem('uniflow_has_seen_schedule_onboarding', 'true');
+        <div className={`metrics-grid ${isScheduleOnboarding ? 'onboarding-active' : ''}`}>
+          <div className={`metric-card ${isScheduleOnboarding ? 'onboarding-highlight' : ''}`} onClick={() => {
+            if (isScheduleOnboarding) {
+              advanceFromScheduleOnboarding();
             }
             console.log('Today\'s Classes card clicked!');
             console.log('About to call handleWeeklyScheduleClick');
@@ -1016,7 +1052,7 @@ const Home: React.FC = () => {
         <div className="scroll-spacer"></div>
 
         {/* Bottom Navigation */}
-        <BottomNavigation />
+        <BottomNavigation voiceOnboardingActive={isVoiceOnboarding} />
 
 
 
@@ -1287,10 +1323,9 @@ const Home: React.FC = () => {
             </div>
           </div>
         )}
-        {showOnboarding && (
+        {isScheduleOnboarding && (
           <div className="home-onboarding-overlay" onClick={() => {
-            setShowOnboarding(false);
-            localStorage.setItem('uniflow_has_seen_schedule_onboarding', 'true');
+            advanceFromScheduleOnboarding();
           }}>
             <svg className="home-onboarding-arrow" width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="white" strokeWidth="4">
               <path d="M20,80 Q50,40 20,20" strokeLinecap="round" fill="none" />
@@ -1303,6 +1338,37 @@ const Home: React.FC = () => {
             </div>
           </div>
         )}
+
+        {isVoiceOnboarding && (
+          <div className="home-onboarding-overlay home-onboarding-overlay--voice" onClick={dismissVoiceOnboarding}>
+            <svg
+              className="home-onboarding-arrow home-onboarding-arrow--voice"
+              width="90"
+              height="90"
+              viewBox="0 0 100 100"
+              fill="none"
+              stroke="white"
+              strokeWidth="4"
+            >
+              <path d="M78,18 Q52,48 50,86" strokeLinecap="round" fill="none" />
+              <path d="M40,68 L50,86 L64,70" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+            <div className="home-onboarding-text home-onboarding-text--voice">
+              <h3>Talk to your AI assistant</h3>
+              <p>Long press the center AI icon to speak. Tell it your tasks and events, and it sets them up effortlessly.</p>
+              <span className="onboarding-dismiss">Tap anywhere to continue</span>
+            </div>
+          </div>
+        )}
+
+        <IonToast
+          isOpen={validationToastOpen}
+          onDidDismiss={() => setValidationToastOpen(false)}
+          message={validationToastMessage}
+          duration={1700}
+          position="top"
+          color="warning"
+        />
 
       </IonContent>
     </IonPage>

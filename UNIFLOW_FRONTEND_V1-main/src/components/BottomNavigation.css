@@ -199,6 +199,24 @@
   box-shadow: none;
 }
 
+.nav-item.central.voice-onboarding-highlight .nav-icon {
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.7),
+    0 0 0 10px rgba(0, 170, 91, 0.3),
+    0 12px 26px rgba(0, 170, 91, 0.55) !important;
+  animation: voiceOnboardingPulse 1.3s ease-in-out infinite;
+}
+
+@keyframes voiceOnboardingPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
 /* Voice assistant: OG icon scales up + orbiting rings (no separate popup orb) */
 .nav-item.central.voice-hub--active {
   animation: none;

@@ -167,7 +167,7 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   z-index: 1;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
 }
 .gtp-wheel::-webkit-scrollbar { display: none; }
 

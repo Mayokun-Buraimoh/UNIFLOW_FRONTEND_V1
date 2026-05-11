@@ -15,7 +15,7 @@ ion-page.course-detail-page,
 
 /* Status Bar Spacer */
 .course-detail-page .status-bar-spacer {
-    height: 60px;
+    height: max(24px, env(safe-area-inset-top, 0px));
     width: 100%;
     flex-shrink: 0;
     background: #ffffff !important;
