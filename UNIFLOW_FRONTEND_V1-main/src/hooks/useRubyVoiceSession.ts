@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import {
   endRubyVoiceSession,
   fetchRubyGreeting,
@@ -163,6 +165,98 @@ function extensionForMime(mime: string): string {
   return 'webm';
 }
 
+// Native iOS capture path. Uses SFSpeechRecognizer via the Capacitor plugin
+// instead of WebView MediaRecorder + backend Whisper. This avoids three iOS
+// WKWebView issues at once: insecure-origin `getUserMedia`, AudioContext
+// auto-suspend, and microphone contention with the live-captions recognizer.
+// Returns the final recognized transcript, or null if cancelled / no speech.
+const NATIVE_IOS_SILENCE_MS = 1500;
+const NATIVE_IOS_MAX_MS = 15_000;
+
+function permissionGranted(state: string): boolean {
+  return state === 'granted' || state === 'limited';
+}
+
+async function recordUtteranceNativeIOS(
+  cancelled: () => boolean,
+  onLiveTranscript?: (text: string) => void
+): Promise<string | null> {
+  // Distinguish hard failures (no plugin, denied permission) from soft
+  // failures ("you were silent this turn"). Hard failures throw so the
+  // outer session catch surfaces an error UI instead of looping forever.
+  const { available } = await SpeechRecognition.available();
+  if (!available) {
+    throw new Error('Speech recognition is not available on this device.');
+  }
+
+  const checked = await SpeechRecognition.checkPermissions();
+  const perm = permissionGranted(checked.speechRecognition)
+    ? checked
+    : await SpeechRecognition.requestPermissions();
+  if (!permissionGranted(perm.speechRecognition)) {
+    throw new Error(
+      'Microphone or Speech Recognition permission denied. Enable both in iOS Settings → UniFlow to use Ruby.'
+    );
+  }
+
+  let latest = '';
+  let lastUpdateMs = Date.now();
+  let sawAnyPartial = false;
+
+  const lang =
+    typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+
+  const partialListener = await SpeechRecognition.addListener(
+    'partialResults',
+    (data: { matches?: string[] }) => {
+      const raw = data.matches?.[0] ?? '';
+      const text = raw.replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      latest = text;
+      lastUpdateMs = Date.now();
+      sawAnyPartial = true;
+      if (onLiveTranscript && !cancelled()) onLiveTranscript(text);
+    }
+  );
+
+  const cleanup = async () => {
+    try {
+      await SpeechRecognition.stop();
+    } catch {
+      /* noop */
+    }
+    try {
+      await partialListener.remove();
+    } catch {
+      /* noop */
+    }
+  };
+
+  try {
+    await SpeechRecognition.start({
+      language: lang,
+      partialResults: true,
+      popup: false,
+      maxResults: 1,
+    });
+  } catch {
+    await cleanup();
+    return null;
+  }
+
+  const startedAt = Date.now();
+  while (!cancelled()) {
+    await new Promise((r) => setTimeout(r, 100));
+    const now = Date.now();
+    if (sawAnyPartial && now - lastUpdateMs > NATIVE_IOS_SILENCE_MS) break;
+    if (now - startedAt > NATIVE_IOS_MAX_MS) break;
+  }
+
+  await cleanup();
+  if (cancelled()) return null;
+  return latest || null;
+}
+
 export interface UseRubyVoiceSessionOptions {
   open: boolean;
   userId: string | undefined;
@@ -281,9 +375,40 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
           }
         }
 
+        // On native iOS we capture + transcribe via SFSpeechRecognizer (the
+        // Capacitor plugin) and POST the text directly. Web and Android keep
+        // the existing MediaRecorder + Whisper round-trip.
+        const useNativeIOS = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform();
+
         while (!cancelledRef.current && sessionIdRef.current) {
           setPhase('listening');
           setTranscript('');
+
+          if (useNativeIOS) {
+            const spokenText = await recordUtteranceNativeIOS(
+              () => cancelledRef.current,
+              (live) => {
+                if (!cancelledRef.current) setTranscript(live);
+              }
+            );
+            if (cancelledRef.current) break;
+            if (!spokenText) {
+              continue;
+            }
+
+            setPhase('thinking');
+            const turn = await postRubyVoiceTurnText(sessionIdRef.current, spokenText);
+            if (cancelledRef.current) break;
+
+            setTranscript(turn.transcript || spokenText);
+            setAssistantMessage(turn.message);
+            dispatchMutations(turn.mutations);
+
+            setPhase('speaking');
+            await playReply(turn.message, turn.audioBase64, turn.audioMimeType);
+            continue;
+          }
+
           const blob = await recordUtteranceUntilSilence(
             () => cancelledRef.current,
             (live) => {
