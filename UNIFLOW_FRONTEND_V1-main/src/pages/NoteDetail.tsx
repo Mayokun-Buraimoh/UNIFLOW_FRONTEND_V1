@@ -1493,7 +1493,23 @@ const NoteDetail: React.FC = () => {
 
   const currentCard = flashcards[flashcardIndex];
   const isFocusSessionActive = focusSessionSecondsLeft !== null;
-  const isConversionPending = !pdfData && storedFileMeta?.isConverting;
+  // True while the user has tapped a note that's still being uploaded /
+  // converted / fetched. We swap the entire `IonContent` body for a polished
+  // loading screen (mirroring the AI tabs' loading style) so the user never
+  // lands on broken/empty tabs and can see clear progress instead of the
+  // old "Wait for upload to finish" toast.
+  const isLocalOnlyNoteId = !!id && id.startsWith('local-');
+  const isPreparingNote =
+    !pdfData && (isLocalOnlyNoteId || Boolean(storedFileMeta?.isConverting));
+  const preparingPhase: 'uploading' | 'converting' | 'finalizing' = storedFileMeta?.isConverting
+    ? 'converting'
+    : isLocalOnlyNoteId
+      ? 'uploading'
+      : 'finalizing';
+  const preparingProgressPct = Math.max(
+    Math.min(100, Math.round(storedFileMeta?.progress ?? 0)),
+    preparingPhase === 'converting' ? 12 : 8
+  );
   const focusPopupPrimaryLabel = !isFocusSessionActive
     ? 'Start Session'
     : isPomodoroBreakActive
@@ -1597,39 +1613,6 @@ const NoteDetail: React.FC = () => {
               Focus
             </button>
           )}
-        </div>
-      )}
-
-      {id?.startsWith('local-') && (
-        <div
-          className="nd-upload-pending-banner"
-          style={{
-            padding: '10px 16px',
-            background: '#fff8e6',
-            color: '#5c4a00',
-            fontSize: 13,
-            lineHeight: 1.4,
-            textAlign: 'center',
-            borderBottom: '1px solid #f0e0bc',
-          }}
-        >
-          Upload in progress — this page will switch to your server file link when ready. Or go back to the course and
-          open the note again.
-          <button
-            type="button"
-            style={{
-              marginLeft: 10,
-              border: 'none',
-              background: 'transparent',
-              color: '#2d6a4f',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              fontSize: 13,
-            }}
-            onClick={handleBack}
-          >
-            Go back
-          </button>
         </div>
       )}
 
@@ -1826,7 +1809,7 @@ const NoteDetail: React.FC = () => {
         </div>
       )}
 
-      {!isPdfFullscreen && (
+      {!isPdfFullscreen && !isPreparingNote && (
         <div className="nd-segments-container">
           <div className="nd-segments">
             <button
@@ -1861,7 +1844,60 @@ const NoteDetail: React.FC = () => {
       )}
 
       <IonContent className={`nd-content ${isPdfFullscreen ? 'fullscreen' : ''}`} scrollY={!isPdfFullscreen} fullscreen={isPdfFullscreen}>
-        {activeSegment === 'notes' && (
+        {isPreparingNote && (
+          <div className="nd-preparing-screen nd-conversion-screen">
+            <div className="nd-conversion-orb nd-conversion-orb-one" />
+            <div className="nd-conversion-orb nd-conversion-orb-two" />
+            <div className="nd-conversion-card">
+              {preparingPhase === 'converting' ? (
+                <>
+                  <div className="nd-conversion-wave">
+                    <span /><span /><span /><span /><span />
+                  </div>
+                  <p className="nd-conversion-eyebrow">Audio Note</p>
+                  <h2>Converting your note</h2>
+                  <p className="nd-conversion-copy">
+                    We&apos;re turning this recording into a readable study note. You&apos;ll see the PDF here as soon as processing finishes.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="nd-conversion-viewer-loader" aria-hidden="true">
+                    <span /><span /><span />
+                  </div>
+                  <p className="nd-conversion-eyebrow">
+                    {preparingPhase === 'uploading' ? 'Uploading' : 'Almost ready'}
+                  </p>
+                  <h2>
+                    {preparingPhase === 'uploading'
+                      ? 'Preparing your note'
+                      : 'Getting your note ready'}
+                  </h2>
+                  <p className="nd-conversion-copy">
+                    {preparingPhase === 'uploading'
+                      ? "We're saving your file. Your note will open here as soon as it's ready — no need to go back."
+                      : "Fetching the latest version of this note. This usually only takes a moment."}
+                  </p>
+                </>
+              )}
+              <div className="nd-conversion-progress">
+                <div
+                  className="nd-conversion-progress-fill"
+                  style={{ width: `${preparingProgressPct}%` }}
+                />
+              </div>
+              <span className="nd-conversion-footnote">
+                {preparingPhase === 'converting'
+                  ? 'Processing in the background…'
+                  : preparingPhase === 'uploading'
+                    ? 'You can stay on this page — it will switch to your note automatically.'
+                    : 'Hang tight…'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {!isPreparingNote && activeSegment === 'notes' && (
           <div className={`nd-tab-container nd-notes-tab ${isPdfFullscreen ? 'fullscreen' : ''}`}>
             <div className="status-bar-spacer" aria-hidden="true" />
             <div className="nd-pdf-toolbar">
@@ -2061,37 +2097,6 @@ const NoteDetail: React.FC = () => {
                     ))}
                   </Document>
                 </>
-              ) : isConversionPending ? (
-                <div className="nd-conversion-screen">
-                  <div className="nd-conversion-orb nd-conversion-orb-one" />
-                  <div className="nd-conversion-orb nd-conversion-orb-two" />
-                  <div className="nd-conversion-card">
-                    <div className="nd-conversion-viewer-loader" aria-hidden="true">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                    <div className="nd-conversion-wave">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                    <p className="nd-conversion-eyebrow">Audio Note</p>
-                    <h2>Converting your note</h2>
-                    <p className="nd-conversion-copy">
-                      We&apos;re turning this recording into a readable study note. You&apos;ll see the PDF here as soon as processing finishes.
-                    </p>
-                    <div className="nd-conversion-progress">
-                      <div
-                        className="nd-conversion-progress-fill"
-                        style={{ width: `${Math.max(storedFileMeta?.progress || 20, 12)}%` }}
-                      />
-                    </div>
-                    <span className="nd-conversion-footnote">Processing in the background...</span>
-                  </div>
-                </div>
               ) : (
                 <p style={{ textAlign: 'center', padding: '40px', color: '#888' }}>No PDF document uploaded. Go back and upload a document to view it here.</p>
               )}
@@ -2099,7 +2104,7 @@ const NoteDetail: React.FC = () => {
           </div>
         )}
 
-        {activeSegment === 'summary' && (
+        {!isPreparingNote && activeSegment === 'summary' && (
           <div className="nd-tab-container nd-summary-tab">
             <div className="nd-summary-header">
               <div className="nd-sh-left">
@@ -2171,7 +2176,7 @@ const NoteDetail: React.FC = () => {
           </div>
         )}
 
-        {activeSegment === 'quiz' && (
+        {!isPreparingNote && activeSegment === 'quiz' && (
           <div className="nd-tab-container nd-quiz-tab">
             {quizzesLoading ? (
               <div className="nd-fc-loading-skeleton">
@@ -2348,7 +2353,7 @@ const NoteDetail: React.FC = () => {
           </div>
         )}
 
-        {activeSegment === 'flashcards' && (
+        {!isPreparingNote && activeSegment === 'flashcards' && (
           <div className="nd-tab-container nd-flashcards-tab">
             <div className="nd-fc-header">
               <div className="nd-fc-header-left">

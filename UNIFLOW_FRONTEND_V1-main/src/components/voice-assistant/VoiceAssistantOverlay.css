@@ -128,6 +128,71 @@
   font-size: 13px;
 }
 
+/* Inline "Thinking…" / "Speaking…" indicator. Lives directly below the
+   transcript so the user can tell Ruby is working on a long answer instead
+   of assuming the request silently broke. */
+.voice-assistant-status {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.voice-assistant-status-label {
+  display: inline-block;
+}
+
+.voice-assistant-status-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.voice-assistant-status-dots span {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  opacity: 0.25;
+  animation: voice-assistant-dot-bounce 1.2s infinite ease-in-out;
+}
+
+.voice-assistant-status-dots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.voice-assistant-status-dots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes voice-assistant-dot-bounce {
+  0%, 80%, 100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.voice-assistant-dock--bubble .voice-assistant-status {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-assistant-status-dots span {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
 .voice-assistant-response {
   margin: 10px 0 0;
   color: rgba(180, 220, 255, 0.95);

@@ -25,7 +25,17 @@ export const useEvents = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch events with optional date filter
+  // Fetch events with optional date filter.
+  //
+  // Server is the source of truth for synced events, but we must preserve any
+  // local optimistic items still in flight (`lf-temp-` ids) and any
+  // user-applied client-only flags such as `completed` (which lives only in
+  // localStorage — the backend Event model does not currently track it).
+  // Without this merge, Ruby-created events (which are written server-side
+  // and only signalled to the client via the `uniflow_events_updated` event)
+  // never showed up in the calendar, because the previous guard
+  // `if (!local.length && remote.length)` ignored the response whenever there
+  // was already anything in localStorage.
   const fetchEvents = useCallback(async (filters?: { date?: string }) => {
     const local = readLocalEvents();
     const localFiltered = filters?.date ? local.filter((e) => e.date === filters.date) : local;
@@ -35,10 +45,21 @@ export const useEvents = () => {
       setError(null);
       const response = await eventService.getEvents(filters);
       const remote = response.events || [];
-      if (!local.length && remote.length) {
-        writeLocalEvents(remote);
-        setEvents(filters?.date ? remote.filter((e) => e.date === filters.date) : remote);
-      }
+      const remoteIds = new Set(remote.map((e) => String(e.id)));
+      const localById = new Map(local.map((e) => [String(e.id), e]));
+      const pendingLocalOnly = local.filter(
+        (e) => typeof e.id === 'string' && e.id.startsWith('lf-temp-') && !remoteIds.has(String(e.id))
+      );
+      const remoteWithLocalFlags = remote.map((r) => {
+        const prev = localById.get(String(r.id)) as (Event & { completed?: boolean }) | undefined;
+        if (prev && typeof prev.completed === 'boolean') {
+          return { ...r, completed: prev.completed } as Event;
+        }
+        return r;
+      });
+      const merged = [...pendingLocalOnly, ...remoteWithLocalFlags];
+      writeLocalEvents(merged);
+      setEvents(filters?.date ? merged.filter((e) => e.date === filters.date) : merged);
     } catch (err: unknown) {
       setError(getErrorMessage(err) || 'Failed to fetch events');
       console.error('Error fetching events:', err);

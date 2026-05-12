@@ -25,10 +25,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   return <TaskContext.Provider value={tasksApi}>{children}</TaskContext.Provider>;
 }
 
-/** Wraps routes when there is no signed-in user — no task store (protected pages are not shown). */
+/**
+ * Wraps routes when there is no signed-in user — no task store (protected
+ * pages are not shown). We gate on `isAuthenticated` (the same flag
+ * `ProtectedRoute` uses) so the provider is guaranteed to be mounted
+ * whenever a protected page can render — preventing a `useTaskContext`
+ * throw during the brief async window between auth state flipping true and
+ * `user` being hydrated.
+ */
 export function TaskProviderGate({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  if (!user) return <>{children}</>;
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <>{children}</>;
   return <TaskProvider>{children}</TaskProvider>;
 }
 

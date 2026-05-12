@@ -79,14 +79,27 @@ const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
   const hasError = !!error || rubyPhase === 'error';
   const statusHint =
     rubyPhase === 'greeting_playing'
-      ? 'Ruby is introducing herself…'
+      ? 'Ruby is introducing herself'
       : rubyPhase === 'listening'
-        ? 'Listening…'
-        : rubyPhase === 'uploading' || rubyPhase === 'thinking'
-          ? 'Thinking…'
-          : rubyPhase === 'speaking'
-            ? 'Speaking…'
-            : null;
+        ? 'Listening'
+        : rubyPhase === 'uploading'
+          ? 'Sending'
+          : rubyPhase === 'thinking'
+            ? 'Thinking'
+            : rubyPhase === 'speaking'
+              ? 'Speaking'
+              : null;
+
+  // Phases where we should always surface a working indicator — even when a
+  // transcript is already on screen — so the user never thinks the request
+  // silently broke. `speaking` is included because before audio actually
+  // plays we briefly have neither a status nor a visible answer.
+  const isWorkingPhase =
+    !hasError &&
+    (rubyPhase === 'uploading' ||
+      rubyPhase === 'thinking' ||
+      rubyPhase === 'speaking' ||
+      rubyPhase === 'greeting_playing');
 
   const isListeningBubble = rubyPhase === 'listening' && !hasError;
 
@@ -121,8 +134,28 @@ const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
           {transcript && rubyPhase !== 'greeting_playing' ? (
             <p className="voice-assistant-transcript-text">{transcript}</p>
           ) : null}
+
+          {/* Always render a working indicator while Ruby is busy — even if a
+              transcript or assistant message is already on screen — so the
+              user can tell the request is still in flight. We hide it once
+              the assistant message is showing AND Ruby is no longer thinking,
+              so the answer doesn't compete with a "Speaking…" shimmer. */}
+          {isWorkingPhase && (rubyPhase === 'uploading' || rubyPhase === 'thinking' || !assistantMessage) ? (
+            <p
+              className="voice-assistant-hint voice-assistant-status"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="voice-assistant-status-label">{statusHint}</span>
+              <span className="voice-assistant-status-dots" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </span>
+            </p>
+          ) : null}
+
           {assistantMessage ? <p className="voice-assistant-response">{assistantMessage}</p> : null}
-          {!assistantMessage && !transcript && statusHint ? <p className="voice-assistant-hint">{statusHint}</p> : null}
         </div>
       </div>
     </div>,

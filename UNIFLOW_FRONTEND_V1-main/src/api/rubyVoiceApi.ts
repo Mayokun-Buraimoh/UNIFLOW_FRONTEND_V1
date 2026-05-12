@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
+import type { WeeklyScheduleSnapshot } from '../utils/weeklyScheduleSnapshot';
 
 export interface RubyVoiceSessionStart {
   session_id: string;
@@ -34,15 +35,37 @@ function bearerHeaders(json = true): HeadersInit {
   return h;
 }
 
-export async function startRubyVoiceSession(timezone: string): Promise<RubyVoiceSessionStart> {
+export async function startRubyVoiceSession(
+  timezone: string,
+  weeklySchedule?: WeeklyScheduleSnapshot | null
+): Promise<RubyVoiceSessionStart> {
+  const body: Record<string, unknown> = { action: 'start', timezone };
+  if (weeklySchedule) body.weekly_schedule = weeklySchedule;
   const res = await fetch(buildUrl('/voice/session'), {
     method: 'POST',
     headers: bearerHeaders(true),
-    body: JSON.stringify({ action: 'start', timezone }),
+    body: JSON.stringify(body),
   });
   const text = await res.text().catch(() => '');
   if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
   return JSON.parse(text) as RubyVoiceSessionStart;
+}
+
+/**
+ * Push an updated weekly-schedule snapshot to an open Ruby session — call this
+ * whenever the user edits their schedule mid-session so Ruby's
+ * `get_todays_classes` tool keeps returning fresh data without forcing a
+ * session restart.
+ */
+export async function refreshRubyVoiceSessionSchedule(
+  sessionId: string,
+  weeklySchedule: WeeklyScheduleSnapshot
+): Promise<void> {
+  await fetch(buildUrl('/voice/session'), {
+    method: 'POST',
+    headers: bearerHeaders(true),
+    body: JSON.stringify({ action: 'refresh_schedule', session_id: sessionId, weekly_schedule: weeklySchedule }),
+  });
 }
 
 export async function endRubyVoiceSession(sessionId: string): Promise<void> {

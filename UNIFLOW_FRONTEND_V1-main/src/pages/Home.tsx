@@ -4,8 +4,8 @@ import { useHistory, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import BottomNavigation from '../components/BottomNavigation';
 import GlassyTimePicker from '../components/GlassyTimePicker';
-import { useTasks } from '../hooks/useTasks';
-import { useEvents } from '../hooks/useEvents';
+import { useTaskContext } from '../contexts/TaskContext';
+import { useEventContext } from '../contexts/EventContext';
 import { useStreak, readLongestStreak } from '../hooks/useStreak';
 import { useProductivityScore } from '../hooks/useProductivityScore';
 import { useProfile } from '../hooks/useProfile';
@@ -68,7 +68,10 @@ const Home: React.FC = () => {
     checkAndRefreshUser();
   }, [user, refreshUser]);
 
-  // Backend task integration
+  // Backend task integration — shared across the signed-in shell so Ruby
+  // (voice assistant), sync queue, and any other producer that fires
+  // `uniflow_tasks_updated` refresh into the same source of truth that Home
+  // renders from.
   const {
     tasks: backendTasks,
     loading: tasksLoading,
@@ -78,12 +81,12 @@ const Home: React.FC = () => {
     deleteTask: deleteBackendTask,
     clearAllTasks: clearAllBackendTasks,
     toggleTaskStatus: toggleBackendTaskStatus
-  } = useTasks();
+  } = useTaskContext();
   const {
     events,
     createEvent: createBackendEvent,
     deleteEvent: deleteBackendEvent,
-  } = useEvents();
+  } = useEventContext();
 
   // UI Enhancement states
   const [currentTime, setCurrentTime] = useState(new Date());

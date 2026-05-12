@@ -1984,6 +1984,18 @@
     linear-gradient(180deg, #f6f7f5 0%, #eef2ef 100%);
 }
 
+/* Page-level variant of `nd-conversion-screen` used when the user opens a
+   note that's still uploading / converting / hydrating. Sits directly inside
+   IonContent (no PDF viewer wrapper), so we have to anchor min-height
+   ourselves and bleed past the IonContent's horizontal padding so the
+   gradient + orbs fill the whole viewport like the in-app AI loading view. */
+.nd-preparing-screen {
+  min-height: calc(100vh - 180px);
+  margin: -0px -20px 0;
+  padding: 32px 20px;
+  border-radius: 24px;
+}
+
 .nd-conversion-card {
   position: relative;
   z-index: 2;

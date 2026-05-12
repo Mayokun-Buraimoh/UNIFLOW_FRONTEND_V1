@@ -57,7 +57,15 @@ export const useTasks = () => {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<TaskStats | null>(null);
 
-  // Fetch tasks with optional filters
+  // Fetch tasks with optional filters.
+  //
+  // Server is the source of truth for synced tasks, but we must preserve any
+  // local optimistic items whose sync to the server is still in flight
+  // (those have `lf-temp-` ids). Without this merge, Ruby-created tasks
+  // (which are written server-side and only signalled to the client via the
+  // `uniflow_tasks_updated` event) never showed up locally, because the
+  // previous guard `if (!local.length && ...)` ignored the response whenever
+  // there was already anything in localStorage.
   const fetchTasks = useCallback(async (filters?: {
     status?: string;
     priority?: string;
@@ -70,10 +78,14 @@ export const useTasks = () => {
       setLoading(true);
       setError(null);
       const response = await taskService.getTasks(filters);
-      if (!local.length && (response.data || []).length) {
-        writeLocalTasks(response.data || []);
-        setTasks(applyTaskFilters(response.data || [], filters));
-      }
+      const remote = response.data || [];
+      const remoteIds = new Set(remote.map((t) => String(t.id)));
+      const pendingLocalOnly = local.filter(
+        (t) => typeof t.id === 'string' && t.id.startsWith('lf-temp-') && !remoteIds.has(String(t.id))
+      );
+      const merged = [...pendingLocalOnly, ...remote];
+      writeLocalTasks(merged);
+      setTasks(applyTaskFilters(merged, filters));
     } catch (err: unknown) {
       setError(getErrorMessage(err) || 'Failed to fetch tasks');
       console.error('Error fetching tasks:', err);

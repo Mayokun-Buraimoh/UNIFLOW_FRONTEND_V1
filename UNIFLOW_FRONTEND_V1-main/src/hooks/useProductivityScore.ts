@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useTasks } from './useTasks';
+import { useTaskContext } from '../contexts/TaskContext';
 import { usePlans } from '../contexts/PlanContext';
 import type { Plan, Objective } from '../contexts/PlanContext';
 import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStorage';
@@ -29,7 +29,7 @@ import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStora
  * entirely (the previous bug, which made completing a weekly target *reduce*
  * total without crediting it).
  *
- * Reactivity: the hook reacts to `useTasks` and `usePlans` automatically.
+ * Reactivity: the hook reacts to `useTaskContext` and `usePlans` automatically.
  * For events (which live in localStorage), it listens to:
  *   - 'storage' (cross-tab updates)
  *   - 'uniflow_events_updated' (in-tab updates dispatched by voice/sync code)
@@ -38,7 +38,7 @@ import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStora
  *   - the user-scoped-storage cleared event (logout / account switch)
  */
 export function useProductivityScore() {
-  const { tasks: backendTasks } = useTasks();
+  const { tasks: backendTasks } = useTaskContext();
   const { plans } = usePlans();
   const [events, setEvents] = useState<Array<{ date?: string; completed?: boolean }>>([]);
 
@@ -66,6 +66,11 @@ export function useProductivityScore() {
 
     window.addEventListener('storage', onStorage);
     window.addEventListener('uniflow_events_updated', onCustom);
+    // EventProvider dispatches `uniflow_events_synced` *after* it has
+    // refreshed localStorage from the server, so we need this second
+    // listener to actually pick up Ruby-created events (which are signalled
+    // by `uniflow_events_updated` *before* the async fetch lands).
+    window.addEventListener('uniflow_events_synced', onCustom);
     window.addEventListener('focus', onFocus);
     window.addEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, onCustom);
     document.addEventListener('visibilitychange', onVisibility);
@@ -73,6 +78,7 @@ export function useProductivityScore() {
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('uniflow_events_updated', onCustom);
+      window.removeEventListener('uniflow_events_synced', onCustom);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, onCustom);
       document.removeEventListener('visibilitychange', onVisibility);

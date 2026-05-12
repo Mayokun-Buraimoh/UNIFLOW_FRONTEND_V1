@@ -2,9 +2,13 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import {
   DEFAULT_WEEKLY_TIME_SLOTS,
-  migrateLegacyTimeSlots,
   parseTimeSlotRangeMinutes,
 } from '../utils/weeklyScheduleTime';
+import {
+  readWeeklyScheduleSnapshot,
+  readWeeklyTimeSlots,
+  type WeeklyScheduleDayKey,
+} from '../utils/weeklyScheduleSnapshot';
 
 /** Master push toggle from notification preferences (default on if unset) */
 export const PUSH_MASTER_PREF_KEY = 'uniflow_push_notif_enabled';
@@ -15,7 +19,7 @@ const CLASS_NOTIF_ID_MAX = 935199;
 
 const MS_15M = 15 * 60 * 1000;
 
-const JS_DAY_TO_SCHEDULE_KEY: Record<number, string> = {
+const JS_DAY_TO_SCHEDULE_KEY: Record<number, WeeklyScheduleDayKey> = {
   0: 'Sun',
   1: 'Mon',
   2: 'Tue',
@@ -25,24 +29,20 @@ const JS_DAY_TO_SCHEDULE_KEY: Record<number, string> = {
   6: 'Sat',
 };
 
-function readTimeSlots(): string[] {
-  try {
-    const raw = localStorage.getItem('weeklyTimeSlots');
-    if (raw) {
-      const parsed = JSON.parse(raw) as string[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const { slots } = migrateLegacyTimeSlots(parsed);
-        return slots;
-      }
-    }
-  } catch {
-    /* noop */
+// Re-exported for any older callers; both functions now live in
+// `utils/weeklyScheduleSnapshot.ts` so the snapshot Ruby ships to the
+// backend matches the data this file uses for local notifications.
+const readTimeSlots = readWeeklyTimeSlots;
+function readScheduleGrid(): {
+  schedule: Record<WeeklyScheduleDayKey, string[]>;
+  venues: Record<WeeklyScheduleDayKey, string[]>;
+} {
+  const snapshot = readWeeklyScheduleSnapshot();
+  if (snapshot) {
+    return { schedule: snapshot.grid, venues: snapshot.venues };
   }
-  return [...DEFAULT_WEEKLY_TIME_SLOTS];
-}
-
-function readScheduleGrid(): { schedule: Record<string, string[]>; venues: Record<string, string[]> } {
-  const empty = (): Record<string, string[]> => ({
+  // SSR / no localStorage — every day is empty.
+  const empty = (): Record<WeeklyScheduleDayKey, string[]> => ({
     Mon: [],
     Tue: [],
     Wed: [],
@@ -51,27 +51,7 @@ function readScheduleGrid(): { schedule: Record<string, string[]>; venues: Recor
     Sat: [],
     Sun: [],
   });
-  const schedule = empty();
-  const venues = empty();
-  try {
-    const s = localStorage.getItem('weeklySchedule');
-    if (s) {
-      const data = JSON.parse(s) as Record<string, string[]>;
-      for (const k of Object.keys(schedule)) {
-        if (Array.isArray(data[k])) schedule[k] = [...data[k]];
-      }
-    }
-    const v = localStorage.getItem('weeklyScheduleVenues');
-    if (v) {
-      const data = JSON.parse(v) as Record<string, string[]>;
-      for (const k of Object.keys(venues)) {
-        if (Array.isArray(data[k])) venues[k] = [...data[k]];
-      }
-    }
-  } catch {
-    /* noop */
-  }
-  return { schedule, venues };
+  return { schedule: empty(), venues: empty() };
 }
 
 async function cancelClassNotificationRange(): Promise<void> {

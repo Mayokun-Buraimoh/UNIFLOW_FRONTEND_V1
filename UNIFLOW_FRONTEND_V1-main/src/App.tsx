@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider } from './contexts/PlanContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
+import { TaskProviderGate } from './contexts/TaskContext';
+import { EventProviderGate } from './contexts/EventContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import Splash from './pages/Splash';
@@ -223,6 +225,8 @@ const App: React.FC = () => {
             <ClassNotificationSync />
             <SubscriptionProvider>
               <PlanProvider>
+                <TaskProviderGate>
+                <EventProviderGate>
                 <IonRouterOutlet>
                 {/* Public Routes */}
                 <Route exact path="/splash">
@@ -277,6 +281,8 @@ const App: React.FC = () => {
                   <RootRoute />
                 </Route>
                 </IonRouterOutlet>
+                </EventProviderGate>
+                </TaskProviderGate>
               </PlanProvider>
             </SubscriptionProvider>
           </AuthProvider>

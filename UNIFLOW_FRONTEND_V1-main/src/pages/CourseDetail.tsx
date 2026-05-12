@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { IonPage, IonContent, useIonToast } from '@ionic/react';
+import { IonPage, IonContent } from '@ionic/react';
 import { useHistory, useParams } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import { services } from '../api/services';
@@ -36,7 +36,6 @@ interface UploadedFile {
 const CourseDetail: React.FC = () => {
     const history = useHistory();
     const { id } = useParams<{ id: string }>();
-    const [presentToast] = useIonToast();
     const [courseName, setCourseName] = useState('Course');
     const [files, setFiles] = useState<UploadedFile[]>([]);
     const [showUploadMenu, setShowUploadMenu] = useState(false);
@@ -464,15 +463,10 @@ const CourseDetail: React.FC = () => {
                                             onMouseLeave={handlePressEnd}
                                             onClick={() => {
                                                 if (showOptionsPopup) return;
-                                                if (file.id.startsWith('local-')) {
-                                                    presentToast({
-                                                        message: 'Wait for upload to finish — then open this note (link will use your server file id).',
-                                                        duration: 2800,
-                                                        color: 'medium',
-                                                        position: 'bottom',
-                                                    });
-                                                    return;
-                                                }
+                                                // Always navigate, even for local-only ids — `NoteDetail` shows
+                                                // a "preparing your note" loading state and auto-redirects to
+                                                // `/note/<serverUuid>` once `rememberPendingNoteRouteMapping`
+                                                // has wired up the upload result.
                                                 history.push(`/note/${file.id}`);
                                             }}
                                         >

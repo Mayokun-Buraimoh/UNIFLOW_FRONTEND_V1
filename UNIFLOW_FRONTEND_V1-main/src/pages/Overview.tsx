@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { IonPage, IonContent } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import { useTasks } from '../hooks/useTasks';
+import { useTaskContext } from '../contexts/TaskContext';
 import { usePlans } from '../contexts/PlanContext';
 import BottomNavigation from '../components/BottomNavigation';
 import type { Task } from '../api/services';
@@ -59,7 +59,7 @@ function isDateToday(date: Date): boolean {
 
 const Overview: React.FC = () => {
   const history = useHistory();
-  const { tasks: backendTasks, loading: tasksLoading } = useTasks();
+  const { tasks: backendTasks, loading: tasksLoading } = useTaskContext();
   const { plans } = usePlans();
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -106,10 +106,15 @@ const Overview: React.FC = () => {
     const onTasksUpdated = () => loadCachedTasks();
     window.addEventListener('storage', onStorage);
     window.addEventListener('uniflow_events_updated', onEventsUpdated);
+    // EventProvider dispatches this after the server fetch completes — needed
+    // so Ruby-created events surface here (the `_updated` event fires before
+    // the async refetch writes localStorage).
+    window.addEventListener('uniflow_events_synced', onEventsUpdated);
     window.addEventListener('uniflow_tasks_updated', onTasksUpdated);
     return () => {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('uniflow_events_updated', onEventsUpdated);
+      window.removeEventListener('uniflow_events_synced', onEventsUpdated);
       window.removeEventListener('uniflow_tasks_updated', onTasksUpdated);
     };
   }, [loadCachedTasks, loadEvents]);

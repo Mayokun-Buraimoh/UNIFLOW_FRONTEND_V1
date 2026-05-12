@@ -15,6 +15,10 @@ const KEY_PREFIXES_TO_REMOVE = [
   'uniflow_sticky_notes_',
   'uniflow_note_read_progress_',
   'uniflow_notes_',
+  // Ruby voice assistant "has heard the intro" flag is keyed per user id, so
+  // it's tied to the account and must be wiped on logout / account switch.
+  // That way a new sign-in on the same device still gets the first-time intro.
+  'uniflow_ruby_introduced_',
 ];
 
 const EXACT_KEYS_TO_REMOVE = [

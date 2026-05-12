@@ -4,9 +4,11 @@ import {
   fetchRubyGreeting,
   postRubyVoiceTurn,
   postRubyVoiceTurnText,
+  refreshRubyVoiceSessionSchedule,
   startRubyVoiceSession,
 } from '../api/rubyVoiceApi';
 import { startLiveCaptionRecognition } from '../services/liveCaptionRecognition';
+import { readWeeklyScheduleSnapshot } from '../utils/weeklyScheduleSnapshot';
 
 export type RubyVoicePhase =
   | 'idle'
@@ -236,17 +238,48 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
     const run = async () => {
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-        const { session_id } = await startRubyVoiceSession(tz);
+        // Snapshot the on-device weekly schedule so Ruby can answer
+        // questions like "how many classes do I have today?" without us
+        // having to round-trip those reads from the backend. The backend
+        // happily accepts an empty/missing snapshot — Ruby just falls back
+        // to telling the user it doesn't have their schedule yet.
+        const weeklySchedule = readWeeklyScheduleSnapshot();
+        const { session_id } = await startRubyVoiceSession(tz, weeklySchedule);
         if (cancelledRef.current) return;
         sessionIdRef.current = session_id;
 
-        setPhase('greeting_playing');
-        const greeting = await fetchRubyGreeting();
-        if (cancelledRef.current) return;
+        // Siri-style behavior: play the verbal introduction only on the user's
+        // first invocation. Subsequent opens fall straight through to the
+        // listening loop — the activation haptic + tone cue in
+        // VoiceAssistantOverlay already give a non-verbal "I'm here" ack
+        // (the "hmm" / chime), matching Apple's behavior.
+        const introKey = `uniflow_ruby_introduced_${userId}`;
+        const hasBeenIntroduced = (() => {
+          try {
+            return localStorage.getItem(introKey) === 'true';
+          } catch {
+            return false;
+          }
+        })();
 
-        setAssistantMessage(greeting.message);
-        await playReply(greeting.message, greeting.audioBase64, greeting.audioMimeType);
-        if (cancelledRef.current) return;
+        if (!hasBeenIntroduced) {
+          setPhase('greeting_playing');
+          const greeting = await fetchRubyGreeting();
+          if (cancelledRef.current) return;
+
+          setAssistantMessage(greeting.message);
+          await playReply(greeting.message, greeting.audioBase64, greeting.audioMimeType);
+          if (cancelledRef.current) return;
+
+          // Only persist *after* the greeting actually finished playing — if
+          // anything bailed (cancel, network, audio failure), the next open
+          // will retry the intro instead of silently skipping it forever.
+          try {
+            localStorage.setItem(introKey, 'true');
+          } catch {
+            /* localStorage unavailable / quota — non-fatal */
+          }
+        }
 
         while (!cancelledRef.current && sessionIdRef.current) {
           setPhase('listening');
@@ -283,9 +316,22 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
       }
     };
 
+    // If the user opens the Schedule tab and edits classes mid-session, push
+    // a fresh snapshot to the backend so `get_todays_classes` returns the
+    // updated list without the user having to close and reopen Ruby.
+    const onScheduleUpdated = () => {
+      const sid = sessionIdRef.current;
+      if (!sid) return;
+      const snapshot = readWeeklyScheduleSnapshot();
+      if (!snapshot) return;
+      void refreshRubyVoiceSessionSchedule(sid, snapshot).catch(() => undefined);
+    };
+    window.addEventListener('weeklyScheduleUpdated', onScheduleUpdated);
+
     void run();
     return () => {
       cancelledRef.current = true;
+      window.removeEventListener('weeklyScheduleUpdated', onScheduleUpdated);
       const sid = sessionIdRef.current;
       sessionIdRef.current = null;
       if (sid) void endRubyVoiceSession(sid).catch(() => undefined);
