@@ -119,10 +119,7 @@ const Register: React.FC = () => {
                <IonInput
                  type="text"
                  value={formData.name}
-                 onIonInput={(e) => {
-                   const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
-                   handleInputChange('name', value);
-                 }}
+                 onIonInput={(e) => handleInputChange('name', e.detail.value ?? '')}
                  placeholder="Full Name"
                  className="register-input"
                />
@@ -132,10 +129,7 @@ const Register: React.FC = () => {
                <IonInput
                  type="email"
                  value={formData.email}
-                 onIonInput={(e) => {
-                   const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
-                   handleInputChange('email', value);
-                 }}
+                 onIonInput={(e) => handleInputChange('email', e.detail.value ?? '')}
                  placeholder="Email"
                  className="register-input"
                />
@@ -145,10 +139,7 @@ const Register: React.FC = () => {
               <IonInput
                 type="password"
                 value={formData.password}
-                onIonInput={(e) => {
-                  const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
-                  handleInputChange('password', value);
-                }}
+                onIonInput={(e) => handleInputChange('password', e.detail.value ?? '')}
                 placeholder="Password"
                 className="register-input"
               />
@@ -158,10 +149,7 @@ const Register: React.FC = () => {
                <IonInput
                  type="password"
                  value={formData.confirmPassword}
-                 onIonInput={(e) => {
-                   const value = (e as CustomEvent<{ value: string | null }>).detail.value ?? '';
-                   handleInputChange('confirmPassword', value);
-                 }}
+                 onIonInput={(e) => handleInputChange('confirmPassword', e.detail.value ?? '')}
                  placeholder="Confirm Password"
                  className="register-input"
                />

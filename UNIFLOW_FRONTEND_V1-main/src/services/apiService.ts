@@ -1,5 +1,6 @@
 // API Service for backend communication
 import config from '../config/environment';
+import { getGoogleOAuthStartUrl } from '../utils/googleOAuth';
 
 const API_BASE_URL = config.API_BASE_URL;
 
@@ -44,8 +45,10 @@ class ApiService {
     const requestConfig: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
         ...options.headers,
       },
+      cache: 'no-store',
       ...options,
     };
 
@@ -69,6 +72,13 @@ class ApiService {
       console.log('Response status:', response.status);
       console.log('Response headers:', response.headers);
       
+      if (response.status === 304) {
+        const cachedUser = localStorage.getItem('uniflow_user');
+        if (cachedUser && endpoint.includes('/auth/me')) {
+          return JSON.parse(cachedUser) as T;
+        }
+      }
+
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
@@ -120,10 +130,9 @@ class ApiService {
     });
   }
 
-  // Google OAuth
+  // Google OAuth (native adds ?app=ios so API uses FRONTEND_GOOGLE_REDIRECT_URI_IOS)
   async googleAuth() {
-    // Redirect to Google OAuth
-    window.location.href = `${this.baseURL}/auth/google`;
+    window.location.href = getGoogleOAuthStartUrl(this.baseURL);
   }
 
   // Profile management

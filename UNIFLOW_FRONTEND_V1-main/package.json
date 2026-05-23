@@ -14,7 +14,9 @@
     "ionic:build:android": "ionic capacitor build android",
     "ionic:sync": "ionic capacitor sync",
     "ionic:open:ios": "ionic capacitor open ios",
-    "ionic:open:android": "ionic capacitor open android"
+    "ionic:open:android": "ionic capacitor open android",
+    "ios:sync": "npm run build && npx cap sync ios",
+    "ios:open": "npm run ios:sync && npx cap open ios"
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "^7.0.1",

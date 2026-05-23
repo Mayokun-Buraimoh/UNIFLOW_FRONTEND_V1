@@ -5,7 +5,11 @@ const config: CapacitorConfig = {
   appName: 'UniFlow',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    iosScheme: 'capacitor',
+    // Live reload from Vite while testing in Xcode simulator (optional):
+    // url: 'http://localhost:5173',
+    // cleartext: true,
   },
   plugins: {
     SplashScreen: {

@@ -2,6 +2,8 @@ import { Redirect, Route, useHistory, useLocation } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PlanProvider } from './contexts/PlanContext';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
@@ -28,6 +30,7 @@ import WeeklySchedule from './pages/WeeklySchedule';
 import SchoolConnection from './pages/SchoolConnection';
 import Chatbot from './pages/Chatbot';
 import GoogleCallback from './pages/GoogleCallback';
+import GoogleOAuthAppUrlListener from './components/GoogleOAuthAppUrlListener';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import CourseDetail from './pages/CourseDetail';
@@ -36,7 +39,7 @@ import Overview from './pages/Overview';
 import Jotting from './pages/Jotting';
 import Pricing from './pages/Pricing';
 import { useStreak } from './hooks/useStreak';
-import { initializeLocalFirstSync } from './localfirst/syncQueue';
+import { initializeLocalFirstSync, syncNow } from './localfirst/syncQueue';
 import { requestTodaysClassNotificationsSync } from './services/scheduleClassNotifications';
 import { applyStatusBarStyle, type AppStatusBarStyle } from './utils/statusBar';
 import { navigateBackSafely } from './utils/navigation';
@@ -54,6 +57,13 @@ const StreakActivityTracker = () => {
   useStreak({ trackActivity: true });
   useEffect(() => {
     initializeLocalFirstSync();
+    if (!Capacitor.isNativePlatform()) return;
+    const sub = CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void syncNow();
+    });
+    return () => {
+      void sub.then((h) => h.remove());
+    };
   }, []);
   return null;
 };
@@ -220,6 +230,7 @@ const App: React.FC = () => {
         <IonReactRouter>
           <AuthProvider>
             <StreakActivityTracker />
+            <GoogleOAuthAppUrlListener />
             <GlobalLeftSwipeBack />
             <StatusBarController />
             <ClassNotificationSync />

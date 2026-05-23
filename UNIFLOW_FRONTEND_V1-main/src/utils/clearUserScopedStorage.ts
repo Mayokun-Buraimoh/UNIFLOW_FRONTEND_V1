@@ -1,3 +1,5 @@
+import { clearAllNotePdfStorage } from './notePdfStorage';
+
 export const USER_SCOPED_STORAGE_CLEARED_EVENT = 'uniflow_user_scoped_storage_cleared';
 
 /**
@@ -58,6 +60,7 @@ export function clearUserScopedLocalStorage(): void {
         localStorage.removeItem(key);
       }
     }
+    void clearAllNotePdfStorage();
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(USER_SCOPED_STORAGE_CLEARED_EVENT));
     }

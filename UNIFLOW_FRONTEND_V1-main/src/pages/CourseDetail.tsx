@@ -8,11 +8,28 @@ import { getNoteReadingProgressPercent } from '../utils/noteReadingProgress';
 import {
   migrateNotePdfDataInStorage,
   rememberPendingNoteRouteMapping,
-  setNotePdfDataInStorage,
+  removeNotePdfFromStorage,
+  setNotePdfBlobInStorage,
 } from '../utils/notePdfStorage';
 import { isUuid } from '../utils/uuidUtils';
 import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStorage';
+import {
+  getMappedCourseServerId,
+  isLocalFirstTempId,
+  syncNow,
+  waitForCourseServerId,
+} from '../localfirst/syncQueue';
 import './CourseDetail.css';
+
+/** Cache PDF in IndexedDB so NoteDetail can open even if server download fails. */
+function cachePdfFileInStorage(noteId: string, rawFile: File): void {
+    const isPdf =
+        rawFile.type === 'application/pdf' || rawFile.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf || !noteId) return;
+    void setNotePdfBlobInStorage(noteId, rawFile).catch((err) => {
+        console.warn('Failed to cache PDF in IndexedDB', err);
+    });
+}
 
 interface Course {
     id: string;
@@ -38,6 +55,12 @@ const CourseDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [courseName, setCourseName] = useState('Course');
     const [files, setFiles] = useState<UploadedFile[]>([]);
+    const [filesLoading, setFilesLoading] = useState(false);
+    const [filesLoadError, setFilesLoadError] = useState<string | null>(null);
+    const [serverFilesLoaded, setServerFilesLoaded] = useState(false);
+    const [filesFetchGeneration, setFilesFetchGeneration] = useState(0);
+    const [courseSyncing, setCourseSyncing] = useState(() => isLocalFirstTempId(id));
+    const [courseSyncError, setCourseSyncError] = useState<string | null>(null);
     const [showUploadMenu, setShowUploadMenu] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,43 +74,74 @@ const CourseDetail: React.FC = () => {
     const lastTapRef = useRef<number>(0);
     const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const loadCourseAndFiles = React.useCallback(() => {
+    const mapServerFileToUploaded = (
+        sf: Record<string, unknown>,
+        idx: number,
+        existing?: UploadedFile
+    ): UploadedFile => {
+        const sid = String(sf.id ?? '');
+        const origName = String(sf.originalName ?? '');
+        const mime = String(sf.mimeType ?? '');
+        const isAudio =
+            mime.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(origName);
+        const stripExt = (n: string) => n.replace(/\.[^/.]+$/, '');
+        if (existing) {
+            return {
+                ...existing,
+                id: sid,
+                title: existing.title || stripExt(origName) || 'Note',
+            };
+        }
+        return {
+            id: sid,
+            title: stripExt(origName) || 'Note',
+            description:
+                'Here you should add a helpful description to communicate the purpose of this documentation.',
+            progress: 100,
+            lectureNumber: idx + 1,
+            sourceType: isAudio ? 'audio' : 'note',
+            isConverting: false,
+        };
+    };
+
+    const loadCourseName = React.useCallback(() => {
         const savedCourses = localStorage.getItem('uniflow_courses');
         if (savedCourses) {
             try {
                 const courses: Course[] = JSON.parse(savedCourses);
                 const course = courses.find((c) => c.id === id);
-                if (course) {
-                    setCourseName(course.name);
-                } else {
-                    setCourseName('Course');
-                }
+                setCourseName(course?.name || 'Course');
+                return;
             } catch (err) {
                 console.error('Failed to parse courses', err);
-                setCourseName('Course');
             }
-        } else {
-            setCourseName('Course');
         }
+        setCourseName('Course');
+    }, [id]);
 
+    const loadLocalOnlyFiles = React.useCallback(() => {
         const savedFiles = localStorage.getItem(`uniflow_files_${id}`);
-        if (savedFiles) {
-            try {
-                const parsed = JSON.parse(savedFiles);
-                // Auto-purge the old mock data if it was saved to the user's storage
-                if (parsed.length > 0 && parsed[0].id === '1' && parsed[0].title === 'Business Logic') {
-                    setFiles([]);
-                    localStorage.removeItem(`uniflow_files_${id}`);
-                } else {
-                    setFiles(parsed);
-                }
-            } catch {
+        if (!savedFiles) {
+            setFiles([]);
+            return;
+        }
+        try {
+            const parsed = JSON.parse(savedFiles);
+            if (parsed.length > 0 && parsed[0].id === '1' && parsed[0].title === 'Business Logic') {
                 setFiles([]);
+                localStorage.removeItem(`uniflow_files_${id}`);
+            } else {
+                setFiles(parsed);
             }
-        } else {
+        } catch {
             setFiles([]);
         }
     }, [id]);
+
+    const loadCourseAndFiles = React.useCallback(() => {
+        loadCourseName();
+        loadLocalOnlyFiles();
+    }, [loadCourseName, loadLocalOnlyFiles]);
 
     // Mock initial state for files to mimic screenshot (only load if no local storage for this course)
     // Actually, let's persist files in localStorage per course
@@ -96,9 +150,20 @@ const CourseDetail: React.FC = () => {
     }, [loadCourseAndFiles]);
 
     useEffect(() => {
-        window.addEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, loadCourseAndFiles);
-        return () => window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, loadCourseAndFiles);
+        const onStorageCleared = () => {
+            loadCourseAndFiles();
+            setFilesFetchGeneration((g) => g + 1);
+        };
+        window.addEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, onStorageCleared);
+        return () => window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, onStorageCleared);
     }, [loadCourseAndFiles]);
+
+    // Re-fetch from server after login in the same tab (storage events do not fire locally).
+    useEffect(() => {
+        const bump = () => setFilesFetchGeneration((g) => g + 1);
+        window.addEventListener('focus', bump);
+        return () => window.removeEventListener('focus', bump);
+    }, []);
 
     useEffect(() => {
         if (files.length > 0) {
@@ -106,12 +171,124 @@ const CourseDetail: React.FC = () => {
         }
     }, [files, id]);
 
+    // If this folder was just created offline, wait for server UUID then fix the URL.
+    useEffect(() => {
+        if (!isLocalFirstTempId(id)) {
+            setCourseSyncing(false);
+            setCourseSyncError(null);
+            return;
+        }
+        let cancelled = false;
+        setCourseSyncing(true);
+        setCourseSyncError(null);
+        (async () => {
+            try {
+                await syncNow();
+                const mapped = getMappedCourseServerId(id);
+                const serverId = mapped && isUuid(mapped) ? mapped : await waitForCourseServerId(id);
+                if (cancelled || !serverId || serverId === id) return;
+                history.replace(`/course/${serverId}`);
+            } catch (err) {
+                if (!cancelled) {
+                    console.warn('Course sync redirect failed', err);
+                    setCourseSyncing(false);
+                    setCourseSyncError(
+                        err instanceof Error
+                            ? err.message
+                            : 'Could not save this course to your account. Go back to Courses and open it again.',
+                    );
+                }
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [id, history]);
+
+    // Pull files from the backend when signed in (survives logout/login).
+    useEffect(() => {
+        const token = localStorage.getItem('uniflow_token');
+        if (!token) {
+            setServerFilesLoaded(true);
+            setFilesLoadError(null);
+            return;
+        }
+        if (!isUuid(id)) {
+            setServerFilesLoaded(true);
+            return;
+        }
+
+        let cancelled = false;
+        setFilesLoading(true);
+        setFilesLoadError(null);
+
+        (async () => {
+            try {
+                const serverFiles = await services.course.getFiles(id);
+                if (cancelled || !Array.isArray(serverFiles)) return;
+
+                setFiles((prev) => {
+                    const prevById = new Map(prev.map((f) => [f.id, f]));
+                    const merged: UploadedFile[] = serverFiles.map((sf: Record<string, unknown>, idx: number) => {
+                        const sid = String(sf.id ?? '');
+                        return mapServerFileToUploaded(sf, idx, prevById.get(sid));
+                    });
+                    const serverIds = new Set(merged.map((f) => f.id));
+                    // Keep in-flight local-only uploads not yet on the server.
+                    for (const local of prev) {
+                        if (local.id.startsWith('local-') && !serverIds.has(local.id)) {
+                            merged.push(local);
+                        }
+                    }
+                    return merged;
+                });
+                setServerFilesLoaded(true);
+            } catch (err) {
+                if (cancelled) return;
+                console.warn('CourseDetail: server file hydration failed', err);
+                const msg = err instanceof Error ? err.message : 'Could not load notes from your account';
+                setFilesLoadError(msg);
+                setServerFilesLoaded(true);
+            } finally {
+                if (!cancelled) setFilesLoading(false);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [id, filesFetchGeneration]);
+
     // Handle file selection
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const rawFile = e.target.files[0];
             const newTitle = rawFile.name.replace(/\.[^/.]+$/, ""); // Strip extension
             const isAudioFile = rawFile.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(rawFile.name);
+            const isPdfFile =
+                rawFile.type === 'application/pdf' || rawFile.name.toLowerCase().endsWith('.pdf');
+            const needsServerConversion =
+                !isAudioFile &&
+                !isPdfFile &&
+                /\.(doc|docx|dot|dotx|ppt|pptx|pot|potx|odt|ods|odp|rtf|txt)$/i.test(rawFile.name);
+
+            let uploadCourseId = id;
+            if (isLocalFirstTempId(id)) {
+                try {
+                    uploadCourseId = await waitForCourseServerId(id);
+                    if (uploadCourseId !== id) {
+                        history.replace(`/course/${uploadCourseId}`);
+                    }
+                } catch (err) {
+                    const message =
+                        err instanceof Error
+                            ? err.message
+                            : 'Course is still syncing. Open it again from the Courses list in a moment.';
+                    alert(message);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
+            }
 
             // Client-only id until the server returns a real `course_files` UUID (never use Date.now() as a fake file id).
             const optimisticId = `local-${crypto.randomUUID()}`;
@@ -119,14 +296,19 @@ const CourseDetail: React.FC = () => {
                 id: optimisticId,
                 title: newTitle,
                 description: 'Here you should add a helpful description to communicate the purpose of this documentation.',
-                progress: isAudioFile ? 15 : 0,
+                progress: needsServerConversion ? 15 : isAudioFile ? 15 : 0,
                 lectureNumber: files.length + 1,
                 sourceType: isAudioFile ? 'audio' : 'note',
-                isConverting: isAudioFile
+                isConverting: isAudioFile || needsServerConversion,
             };
 
             // Show optimistic item in UI immediately
             setFiles(prev => [...prev, optimisticFile]);
+
+            // Cache PDF bytes locally for instant open (IndexedDB — works on iOS simulator).
+            if (isPdfFile) {
+                cachePdfFileInStorage(optimisticId, rawFile);
+            }
 
             const token = localStorage.getItem('uniflow_token');
 
@@ -134,34 +316,28 @@ const CourseDetail: React.FC = () => {
             const fallbackToLocal = () => {
                 const isPdf = rawFile.type === 'application/pdf' || rawFile.name.toLowerCase().endsWith('.pdf');
                 if (isPdf) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const dataUrl = event.target?.result as string;
+                    void setNotePdfBlobInStorage(optimisticId, rawFile).then(() => {
                         try {
-                            setNotePdfDataInStorage(optimisticId, dataUrl);
-                            const existing = JSON.parse(localStorage.getItem(`uniflow_files_${id}`) || '[]');
+                            const existing = JSON.parse(localStorage.getItem(`uniflow_files_${uploadCourseId}`) || '[]');
                             const fileExists = existing.some((f: UploadedFile) => f.id === optimisticId);
                             if (!fileExists) {
                                 existing.push(optimisticFile);
-                                localStorage.setItem(`uniflow_files_${id}`, JSON.stringify(existing));
+                                localStorage.setItem(`uniflow_files_${uploadCourseId}`, JSON.stringify(existing));
                             }
                         } catch (err) {
-                            console.error("Local storage quota exceeded or failed to store PDF data");
-                            alert("Oops! Note too large to save offline. Try a smaller file, or check backend connection.");
+                            console.error('Failed to store note metadata', err);
                         }
-                    };
-                    reader.readAsDataURL(rawFile);
+                    }).catch((err) => {
+                        console.error('Failed to cache PDF offline', err);
+                        alert('Could not cache this PDF on device. Try again or use a smaller file.');
+                    });
                 } else {
-                    const isWordOrPpt = /\.(doc|docx|ppt|pptx)$/i.test(rawFile.name);
-                    if (isWordOrPpt) {
-                        alert("Upload recorded, however native .doc / .ppt viewing currently requires backend conversion.");
-                    }
                     try {
-                        const existing = JSON.parse(localStorage.getItem(`uniflow_files_${id}`) || '[]');
+                        const existing = JSON.parse(localStorage.getItem(`uniflow_files_${uploadCourseId}`) || '[]');
                         const fileExists = existing.some((f: UploadedFile) => f.id === optimisticId);
                         if (!fileExists) {
                             existing.push(optimisticFile);
-                            localStorage.setItem(`uniflow_files_${id}`, JSON.stringify(existing));
+                            localStorage.setItem(`uniflow_files_${uploadCourseId}`, JSON.stringify(existing));
                         }
                     } catch (err) {
                         console.error("Local storage quota exceeded or failed to store PDF data");
@@ -172,7 +348,7 @@ const CourseDetail: React.FC = () => {
             // If signed-in, attempt to upload to backend which will handle conversion to PDF
             if (token) {
                 try {
-                    const resp: unknown = await services.course.uploadFile(id, rawFile);
+                    const resp: unknown = await services.course.uploadFile(uploadCourseId, rawFile);
                     const raw = (resp as { file?: unknown })?.file ?? resp;
                     const rec = raw as { id?: string; originalName?: string; title?: string };
                     const serverId = String(rec?.id ?? '').trim();
@@ -181,17 +357,20 @@ const CourseDetail: React.FC = () => {
                         console.error('Upload succeeded but response had no valid course_files UUID; falling back to local-only.', resp);
                         fallbackToLocal();
                     } else {
-                        migrateNotePdfDataInStorage(optimisticId, serverId);
+                        void migrateNotePdfDataInStorage(optimisticId, serverId);
                         rememberPendingNoteRouteMapping(optimisticId, serverId);
+                        if (isPdfFile) {
+                            cachePdfFileInStorage(serverId, rawFile);
+                        }
 
                         const serverFile: UploadedFile = {
                             id: serverId,
                             title: rec?.originalName || rec?.title || newTitle,
                             description: optimisticFile.description,
-                            progress: isAudioFile ? 20 : 0,
+                            progress: needsServerConversion ? 50 : isAudioFile ? 20 : 100,
                             lectureNumber: optimisticFile.lectureNumber,
                             sourceType: optimisticFile.sourceType,
-                            isConverting: isAudioFile,
+                            isConverting: isAudioFile || needsServerConversion,
                         };
 
                         // Replace optimistic entry with server-backed entry
@@ -199,10 +378,10 @@ const CourseDetail: React.FC = () => {
 
                         // Also persist lightweight metadata locally
                         try {
-                            const existing = JSON.parse(localStorage.getItem(`uniflow_files_${id}`) || '[]');
+                            const existing = JSON.parse(localStorage.getItem(`uniflow_files_${uploadCourseId}`) || '[]');
                             const filtered = existing.filter((f: UploadedFile) => f.id !== optimisticId);
                             filtered.push(serverFile);
-                            localStorage.setItem(`uniflow_files_${id}`, JSON.stringify(filtered));
+                            localStorage.setItem(`uniflow_files_${uploadCourseId}`, JSON.stringify(filtered));
                         } catch {
                             /* noop */
                         }
@@ -210,35 +389,31 @@ const CourseDetail: React.FC = () => {
                         // Attempt to download the stored PDF
                         try {
                             const apiBase = getApiBaseUrl().replace(/\/$/, '');
-                            const downloadUrl = `${apiBase}/courses/${id}/files/${encodeURIComponent(serverFile.id)}`;
+                            const downloadUrl = `${apiBase}/courses/${uploadCourseId}/files/${encodeURIComponent(serverFile.id)}`;
                             const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
 
                             const dlResp = await fetch(downloadUrl, { headers });
                             if (dlResp.ok) {
                                 const blob = await dlResp.blob();
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                    const dataUrl = ev.target?.result as string;
-                                    try {
-                                        setNotePdfDataInStorage(serverFile.id, dataUrl);
-                                        setFiles((prev) =>
-                                            prev.map((file) =>
-                                                file.id === serverFile.id ? { ...file, progress: 100, isConverting: false } : file
-                                            )
-                                        );
-                                    } catch (e) {
-                                        console.error('Failed to cache downloaded PDF locally', e);
-                                    }
-                                };
-                                reader.readAsDataURL(blob);
+                                await setNotePdfBlobInStorage(serverFile.id, blob);
+                                setFiles((prev) =>
+                                    prev.map((file) =>
+                                        file.id === serverFile.id ? { ...file, progress: 100, isConverting: false } : file,
+                                    ),
+                                );
                             }
                         } catch (e) {
                             console.warn('Error while fetching stored PDF for local cache', e);
                         }
                     }
                 } catch (err) {
-                    console.warn('Upload to server failed, falling back to local storage', err);
-                    fallbackToLocal();
+                    console.warn('Upload to server failed', err);
+                    const message =
+                        err instanceof Error ? err.message : 'Upload failed. Check that the backend is running.';
+                    setFiles((prev) => prev.filter((f) => f.id !== optimisticId));
+                    alert(
+                        `Could not save this note to your account:\n\n${message}\n\nNotes only stay after logout when they are saved to the server. Please try again.`,
+                    );
                 }
             } else {
                 fallbackToLocal();
@@ -269,7 +444,7 @@ const CourseDetail: React.FC = () => {
         if (selectedNote) {
             const updatedFiles = files.filter(f => f.id !== selectedNote.id);
             setFiles(updatedFiles);
-            localStorage.removeItem(`uniflow_note_data_${selectedNote.id}`); // Clean up the file content
+            removeNotePdfFromStorage(selectedNote.id);
 
             // Explicitly sync to localStorage for the course so it doesn't reappear on refresh
             if (updatedFiles.length === 0) {
@@ -422,9 +597,29 @@ const CourseDetail: React.FC = () => {
                     />
 
                     <div className="course-detail-body">
-                        {files.length === 0 ? (
+                        {courseSyncing ? (
+                            <p className="empty-state-text">Setting up this course folder…</p>
+                        ) : courseSyncError ? (
+                            <div style={{ textAlign: 'center', padding: '24px' }}>
+                                <p className="empty-state-text">{courseSyncError}</p>
+                                <button
+                                    type="button"
+                                    className="nd-back-btn"
+                                    style={{ marginTop: 12 }}
+                                    onClick={() => history.push('/courses')}
+                                >
+                                    Back to Courses
+                                </button>
+                            </div>
+                        ) : filesLoading ? (
+                            <p className="empty-state-text">Loading your notes…</p>
+                        ) : files.length === 0 ? (
                             <p className="empty-state-text">
-                                Click on the add button to upload note files
+                                {filesLoadError
+                                    ? `Could not load notes: ${filesLoadError}`
+                                    : serverFilesLoaded && localStorage.getItem('uniflow_token')
+                                      ? 'No notes saved to your account for this course yet. Tap + to upload — files stay here after you log out once upload succeeds.'
+                                      : 'Click on the add button to upload note files'}
                             </p>
                         ) : (
                             <div className="cd-files-list">

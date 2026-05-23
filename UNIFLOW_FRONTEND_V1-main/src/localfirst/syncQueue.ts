@@ -29,7 +29,69 @@ type SyncHandler = (item: LocalFirstQueueItem) => Promise<SyncHandlerResult | vo
 const QUEUE_KEY = 'uniflow_localfirst_sync_queue_v1';
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
 const BASE_BACKOFF_MS = 2000;
-const TEMP_ID_PREFIX = 'lf-temp-';
+export const TEMP_ID_PREFIX = 'lf-temp-';
+
+export function isLocalFirstTempId(id: string | undefined | null): boolean {
+  if (id == null) return false;
+  return String(id).trim().startsWith(TEMP_ID_PREFIX);
+}
+
+const COURSE_ID_MAP_PREFIX = 'uniflow_course_id_map_';
+
+function rememberCourseIdMapping(tempId: string, serverId: string) {
+  if (!canUseStorage() || !tempId || !serverId) return;
+  try {
+    localStorage.setItem(`${COURSE_ID_MAP_PREFIX}${tempId}`, serverId);
+  } catch {
+    /* quota */
+  }
+}
+
+export function getMappedCourseServerId(tempId: string): string | null {
+  if (!canUseStorage() || !isLocalFirstTempId(tempId)) return null;
+  try {
+    const mapped = localStorage.getItem(`${COURSE_ID_MAP_PREFIX}${tempId}`);
+    return mapped && mapped.trim() ? mapped.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Wait until a local-first course id has a real server UUID (for uploads). */
+export async function waitForCourseServerId(
+  courseId: string,
+  options?: { timeoutMs?: number; intervalMs?: number },
+): Promise<string> {
+  const trimmed = String(courseId || '').trim();
+  const uuidRe =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRe.test(trimmed)) return trimmed;
+  if (!isLocalFirstTempId(trimmed)) {
+    throw new Error('Invalid course id');
+  }
+
+  const timeoutMs = options?.timeoutMs ?? 30_000;
+  const intervalMs = options?.intervalMs ?? 400;
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const mapped = getMappedCourseServerId(trimmed);
+    if (mapped && uuidRe.test(mapped)) return mapped;
+
+    const queue = readQueue();
+    const pending = queue.find(
+      (q) => q.entity === 'courses' && q.tempId === trimmed && q.serverId && uuidRe.test(String(q.serverId)),
+    );
+    if (pending?.serverId) return String(pending.serverId);
+
+    await syncNow();
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+
+  throw new Error(
+    'Course is still syncing. Go back to the Courses list, wait a moment, then open this course again.',
+  );
+}
 
 const handlers = new Map<string, SyncHandler>();
 let syncStatus: LocalFirstSyncStatus = 'idle';
@@ -90,6 +152,7 @@ const replaceTempId = (
   if (!canUseStorage()) return;
   try {
     if (entity === 'courses') {
+      rememberCourseIdMapping(tempId, serverId);
       const raw = localStorage.getItem('uniflow_courses');
       const courses = raw ? JSON.parse(raw) : [];
       if (Array.isArray(courses)) {
@@ -97,6 +160,12 @@ const replaceTempId = (
           String(course?.id) === tempId ? { ...course, id: serverId } : course
         );
         localStorage.setItem('uniflow_courses', JSON.stringify(next));
+      }
+      const filesKey = `uniflow_files_${tempId}`;
+      const filesRaw = localStorage.getItem(filesKey);
+      if (filesRaw) {
+        localStorage.setItem(`uniflow_files_${serverId}`, filesRaw);
+        localStorage.removeItem(filesKey);
       }
     } else if (entity === 'events') {
       const raw = localStorage.getItem('uniflow_events');
@@ -308,11 +377,22 @@ export const deleteLocalFirst = (
 const registerDefaultHandlers = () => {
   registerSyncHandler('courses', 'create', async (item) => {
     const payload = asRecord(item.payload);
+    const name = String(payload.name || '').trim();
+    if (!name) throw new Error('Course name is required');
     const response = await api.post('/courses/', {
-      name: payload.name,
-      code: payload.name,
+      name,
+      code: String(payload.code || name).trim(),
     });
-    const serverId = String(response?.id || response?.course?.id || item.tempId || '');
+    const serverId = String(
+      (response as { id?: string })?.id ||
+        (response as { course?: { id?: string } })?.course?.id ||
+        '',
+    ).trim();
+    const uuidRe =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRe.test(serverId)) {
+      throw new Error('Course create did not return a server id (are you signed in?)');
+    }
     return { tempId: item.tempId, serverId };
   });
 

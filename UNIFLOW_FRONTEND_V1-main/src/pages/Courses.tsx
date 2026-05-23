@@ -4,7 +4,17 @@ import { useHistory } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import BackButton from '../components/BackButton';
 import { USER_SCOPED_STORAGE_CLEARED_EVENT } from '../utils/clearUserScopedStorage';
-import { createLocalFirst, deleteLocalFirst, updateLocalFirst } from '../localfirst/syncQueue';
+import {
+  createLocalFirst,
+  deleteLocalFirst,
+  getMappedCourseServerId,
+  isLocalFirstTempId,
+  syncNow,
+  updateLocalFirst,
+  waitForCourseServerId,
+} from '../localfirst/syncQueue';
+import { services } from '../api/services';
+import { isUuid } from '../utils/uuidUtils';
 import './Courses.css';
 
 interface Course {
@@ -50,6 +60,81 @@ const Courses: React.FC = () => {
     };
     window.addEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, reloadFromStorage);
     return () => window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, reloadFromStorage);
+  }, []);
+
+  // Drain any pending local-first course creates (e.g. after login).
+  useEffect(() => {
+    void syncNow();
+  }, []);
+
+  // Hydrate from server on mount so the user sees their courses on a fresh
+  // device / cleared storage. Local-first state already rendered above —
+  // this merges the server snapshot in additively and never drops courses
+  // that are still pending sync (those have `lf-temp-…` ids).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await syncNow();
+        const serverCourses = await services.course.getCourses();
+        if (cancelled || !Array.isArray(serverCourses)) return;
+        let localSnapshot: Course[] = [];
+        try {
+          const raw = localStorage.getItem('uniflow_courses');
+          localSnapshot = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(localSnapshot)) localSnapshot = [];
+        } catch {
+          localSnapshot = [];
+        }
+        const formatDmy = (d: Date) =>
+          d
+            .toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: '2-digit',
+            })
+            .replace(/\//g, '-');
+        setCourses((prev) => {
+          const base = localSnapshot.length > 0 ? localSnapshot : prev;
+          const prevById = new Map(base.map((c) => [c.id, c]));
+          const merged: Course[] = serverCourses.map((sc: Record<string, unknown>, idx: number) => {
+            const id = String(sc.id ?? '');
+            const existing = prevById.get(id);
+            const fileCountForExisting = Number(sc.fileCount);
+            if (existing) {
+              return {
+                ...existing,
+                id,
+                name: String(sc.name ?? existing.name),
+                notesCount: Number.isFinite(fileCountForExisting)
+                  ? fileCountForExisting
+                  : existing.notesCount,
+              };
+            }
+            const fileCount = Number(sc.fileCount);
+            return {
+              id,
+              name: String(sc.name ?? sc.code ?? 'Course'),
+              notesCount: Number.isFinite(fileCount) ? fileCount : 0,
+              lastOpened: sc.lastOpened
+                ? formatDmy(new Date(String(sc.lastOpened)))
+                : formatDmy(new Date(String(sc.createdAt ?? Date.now()))),
+              colorTheme: THEMES[idx % THEMES.length],
+            };
+          });
+          const serverIds = new Set(merged.map((c) => c.id));
+          for (const local of base) {
+            if (!serverIds.has(local.id)) merged.push(local);
+          }
+          return merged;
+        });
+      } catch (err) {
+        console.warn('Courses: server hydration failed, staying on local data', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const [showAddPopover, setShowAddPopover] = useState(false);
   const [showNameAlert, setShowNameAlert] = useState(false);
@@ -138,9 +223,9 @@ const Courses: React.FC = () => {
     }
   };
 
-  const getNotesCount = (courseId: string) => {
+  const getNotesCount = (course: Course) => {
     try {
-      const savedFiles = localStorage.getItem(`uniflow_files_${courseId}`);
+      const savedFiles = localStorage.getItem(`uniflow_files_${course.id}`);
       if (savedFiles) {
         const parsed = JSON.parse(savedFiles);
         if (Array.isArray(parsed)) return parsed.length;
@@ -148,7 +233,7 @@ const Courses: React.FC = () => {
     } catch {
       // Ignored
     }
-    return 0;
+    return course.notesCount || 0;
   };
 
   const handleTogglePopover = () => {
@@ -180,28 +265,48 @@ const Courses: React.FC = () => {
       .toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })
       .replace(/\//g, '-');
     const normalized = normalizeCourseName(trimmed);
+    const colorTheme = THEMES[courses.length % THEMES.length];
+
+    const appendCourse = (courseId: string) => {
+      setCourses((prev) => {
+        if (prev.length >= MAX_COURSE_FOLDERS) return prev;
+        if (prev.some((course) => normalizeCourseName(course.name) === normalized)) return prev;
+        const next: Course = {
+          id: courseId,
+          name: normalized,
+          notesCount: 0,
+          lastOpened,
+          colorTheme,
+        };
+        return [...prev, next];
+      });
+    };
+
+    const token = localStorage.getItem('uniflow_token');
+    if (token) {
+      try {
+        const res = await services.course.createCourse({ name: normalized, code: normalized });
+        const serverId = String((res as { id?: string })?.id ?? '').trim();
+        if (isUuid(serverId)) {
+          appendCourse(serverId);
+          return;
+        }
+      } catch (err) {
+        console.warn('Courses: server create failed, using offline queue', err);
+      }
+    }
+
     createLocalFirst(
       'courses',
       {
         name: normalized,
         notesCount: 0,
         lastOpened,
-        colorTheme: THEMES[courses.length % THEMES.length],
+        colorTheme,
       },
       (payload) => {
-        setCourses((prev) => {
-          if (prev.length >= MAX_COURSE_FOLDERS) return prev;
-          if (prev.some((course) => normalizeCourseName(course.name) === normalized)) return prev;
-          const optimistic: Course = {
-            id: String(payload.id),
-            name: normalized,
-            notesCount: 0,
-            lastOpened,
-            colorTheme: THEMES[prev.length % THEMES.length],
-          };
-          return [...prev, optimistic];
-        });
-      }
+        appendCourse(String(payload.id));
+      },
     );
   };
 
@@ -302,9 +407,24 @@ const Courses: React.FC = () => {
                     onMouseUp={handlePressEnd}
                     onMouseLeave={handlePressEnd}
                     onClick={() => {
-                      if (!showOptionsPopup) {
-                        history.push(`/course/${course.id}`);
-                      }
+                      if (showOptionsPopup) return;
+                      void (async () => {
+                        let openId = course.id;
+                        if (isLocalFirstTempId(openId)) {
+                          try {
+                            await syncNow();
+                            const mapped = getMappedCourseServerId(openId);
+                            openId =
+                              mapped && isUuid(mapped) ? mapped : await waitForCourseServerId(openId);
+                          } catch {
+                            window.alert(
+                              'This folder is still saving to your account. Wait a few seconds on the Courses screen, then try again.',
+                            );
+                            return;
+                          }
+                        }
+                        history.push(`/course/${openId}`);
+                      })();
                     }}
                   >
                     <div className="course-card-content">
@@ -324,7 +444,7 @@ const Courses: React.FC = () => {
                             {course.name}
                           </h2>
                         )}
-                        <p className="course-notes">{getNotesCount(course.id)} notes</p>
+                        <p className="course-notes">{getNotesCount(course)} notes</p>
                       </div>
                       <div className="course-card-right">
                         <img src={getFileIcon(course.colorTheme)} alt="File" className="course-file-icon" />

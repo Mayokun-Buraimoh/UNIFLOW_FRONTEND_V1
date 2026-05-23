@@ -42,7 +42,8 @@ import {
 } from '../utils/noteReadingProgress';
 import {
   NOTE_PDF_UPDATED_EVENT,
-  setNotePdfDataInStorage,
+  getNotePdfFromStorage,
+  setNotePdfBlobInStorage,
   UNIFLOW_PENDING_NOTE_ROUTE_EVENT,
 } from '../utils/notePdfStorage';
 import { isLocalOnlyFileId, isUuid } from '../utils/uuidUtils';
@@ -222,7 +223,8 @@ const NoteDetail: React.FC = () => {
   // PDF states
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [pdfData, setPdfData] = useState<string | null>(null);
+  const [pdfData, setPdfData] = useState<Blob | string | null>(null);
+  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
   const [scale, setScale] = useState(1.0);
   const [rotation, setRotation] = useState(0);
   const [isPdfFullscreen, setIsPdfFullscreen] = useState(false);
@@ -384,7 +386,13 @@ const NoteDetail: React.FC = () => {
     };
   }, []);
 
-  const fetchAndCachePdfForFile = useCallback(async (courseId: string, fileId: string): Promise<string | null> => {
+  const pdfCacheSize = (data: Blob | string | null): number => {
+    if (!data) return 0;
+    if (typeof data === 'string') return data.length;
+    return data.size;
+  };
+
+  const fetchAndCachePdfForFile = useCallback(async (courseId: string, fileId: string): Promise<Blob | null> => {
     if (!courseId || !fileId) return null;
     // `course_files.id` is a UUID; numeric / `local-*` / `JOT_*` ids must not hit this endpoint.
     if (!isUuid(fileId)) {
@@ -392,25 +400,46 @@ const NoteDetail: React.FC = () => {
     }
     try {
       const token = localStorage.getItem('uniflow_token');
-      if (!token) return null;
+      if (!token) {
+        setPdfLoadError('Sign in again to load this note from the server.');
+        return null;
+      }
       const apiBase = getApiBaseUrl().replace(/\/$/, '');
       const downloadUrl = `${apiBase}/courses/${encodeURIComponent(courseId)}/files/${encodeURIComponent(fileId)}`;
       const res = await fetch(downloadUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        if (res.status === 404) {
+          setPdfLoadError(
+            'This note is listed in your account but the PDF file is missing on the server (often after a deploy). Go back to the course and upload the document again.',
+          );
+        } else {
+          setPdfLoadError(`Could not download the PDF (HTTP ${res.status}). Try uploading again.`);
+        }
+        return null;
+      }
       const blob = await res.blob();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => resolve(String(ev.target?.result || ''));
-        reader.onerror = () => reject(new Error('Failed to read PDF blob'));
-        reader.readAsDataURL(blob);
-      });
-      if (!dataUrl.startsWith('data:application/pdf;base64,')) return null;
-      setNotePdfDataInStorage(fileId, dataUrl);
-      return dataUrl;
+      const mime = blob.type || 'application/pdf';
+      if (!mime.includes('pdf')) {
+        setPdfLoadError('The server returned a file that is not a valid PDF. Try re-uploading the original document.');
+        return null;
+      }
+      await setNotePdfBlobInStorage(fileId, blob);
+      setPdfLoadError(null);
+      return blob;
     } catch (error) {
       console.warn('Failed to fetch/cache note PDF from backend', error);
+      const name = error instanceof Error ? error.name : '';
+      if (name === 'QuotaExceededError') {
+        setPdfLoadError('Device storage is full. Remove old cached notes in app settings or reinstall the app.');
+      } else if (error instanceof TypeError) {
+        setPdfLoadError('Network error while loading the PDF. Check your connection and try again.');
+      } else {
+        setPdfLoadError(
+          error instanceof Error ? error.message : 'Could not load the PDF. Try opening the note again.',
+        );
+      }
       return null;
     }
   }, []);
@@ -423,12 +452,18 @@ const NoteDetail: React.FC = () => {
     setStoredNoteContext(noteContext);
 
     const hydrate = async () => {
-      const primaryKey = `uniflow_note_data_${targetId}`;
       const fileId = String(fileMeta?.id || targetId);
-      const fileKey = `uniflow_note_data_${fileId}`;
-      let data = localStorage.getItem(primaryKey) || localStorage.getItem(fileKey);
+      let data: Blob | null = null;
+      try {
+        data = (await getNotePdfFromStorage(targetId)) || (await getNotePdfFromStorage(fileId));
+      } catch (e) {
+        console.warn('Note PDF cache read failed', e);
+      }
       if (!data && noteContext.courseId && fileId) {
         data = await fetchAndCachePdfForFile(noteContext.courseId, fileId);
+      }
+      if (data) {
+        setPdfLoadError(null);
       }
       setPdfData(data || null);
     };
@@ -514,10 +549,6 @@ const NoteDetail: React.FC = () => {
 
       if (data.document_name) setDocumentName(data.document_name);
       if (data.course_name) setCourseName(data.course_name);
-
-      if (cards.length > 0 && !focusSessionActiveRef.current) {
-        setActiveSegment('flashcards');
-      }
     } catch (err) {
       console.error('Failed to fetch flashcards from Django:', err);
     } finally {
@@ -540,10 +571,6 @@ const NoteDetail: React.FC = () => {
 
       if (data.document_name) setDocumentName(data.document_name);
       if (data.course_name) setCourseName(data.course_name);
-
-      if (qz.length > 0 && !focusSessionActiveRef.current) {
-        setActiveSegment('quiz');
-      }
     } catch (err) {
       console.error('Failed to fetch quizzes from Django:', err);
     } finally {
@@ -565,10 +592,6 @@ const NoteDetail: React.FC = () => {
 
       if (data.document_name) setDocumentName(data.document_name);
       if (data.course_name) setCourseName(data.course_name);
-
-      if (sections.length > 0 && !focusSessionActiveRef.current) {
-        setActiveSegment('summary');
-      }
     } catch (err) {
       console.error('Failed to fetch summary from Django:', err);
     } finally {
@@ -680,22 +703,14 @@ const NoteDetail: React.FC = () => {
       syncNotePayloadFromStorage(id);
     };
 
-    const onStorage = (ev: StorageEvent) => {
-      if (ev.key === `uniflow_note_data_${id}`) {
-        syncNotePayloadFromStorage(id);
-      }
-    };
-
     window.addEventListener(NOTE_PDF_UPDATED_EVENT, onPdfUpdated);
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', onWindowFocus);
-    window.addEventListener('storage', onStorage);
 
     return () => {
       window.removeEventListener(NOTE_PDF_UPDATED_EVENT, onPdfUpdated);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', onWindowFocus);
-      window.removeEventListener('storage', onStorage);
     };
   }, [id, syncNotePayloadFromStorage]);
 
@@ -709,11 +724,12 @@ const NoteDetail: React.FC = () => {
     const maxAttempts = 48;
     const timer = window.setInterval(() => {
       attempts += 1;
-      const latest = localStorage.getItem(`uniflow_note_data_${id}`);
-      if (latest) {
-        syncNotePayloadFromStorage(id);
-        window.clearInterval(timer);
-      } else if (attempts >= maxAttempts) {
+      void getNotePdfFromStorage(id).then((blob) => {
+        if (blob) {
+          syncNotePayloadFromStorage(id);
+        }
+      });
+      if (attempts >= maxAttempts) {
         window.clearInterval(timer);
       }
     }, 500);
@@ -760,9 +776,10 @@ const NoteDetail: React.FC = () => {
     }
   }, [id, stickyNotes]);
 
-  // Check for existing flashcards and quizzes in DB whenever a Note id is present
+  // Prefetch study data in background; stay on Notes until the user picks a tab.
   useEffect(() => {
     if (!id) return;
+    setActiveSegment('notes');
     let alive = true;
     (async () => {
       const pdfId = await ensureAiPdfId(id);
@@ -1995,7 +2012,7 @@ const NoteDetail: React.FC = () => {
                 <>
 
                   <Document
-                    key={`nd-pdf-${id}-${pdfData.length}`}
+                    key={`nd-pdf-${id}-${pdfCacheSize(pdfData)}`}
                     file={pdfData}
                     onLoadSuccess={onDocumentLoadSuccess}
                     loading={<div style={{ padding: '20px', textAlign: 'center' }}>Loading PDF...</div>}
@@ -2098,7 +2115,22 @@ const NoteDetail: React.FC = () => {
                   </Document>
                 </>
               ) : (
-                <p style={{ textAlign: 'center', padding: '40px', color: '#888' }}>No PDF document uploaded. Go back and upload a document to view it here.</p>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#888', maxWidth: 420, margin: '0 auto' }}>
+                  <p style={{ margin: '0 0 12px' }}>
+                    {pdfLoadError ||
+                      'No PDF available yet. Go back to the course and upload a document (PDF, Word, or PowerPoint).'}
+                  </p>
+                  {pdfLoadError ? (
+                    <button
+                      type="button"
+                      className="nd-back-btn"
+                      style={{ marginTop: 8 }}
+                      onClick={() => history.goBack()}
+                    >
+                      Back to course
+                    </button>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>

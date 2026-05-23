@@ -1,16 +1,16 @@
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
 
+/** @deprecated Prefer getApiBaseUrl() — value can differ on web vs Capacitor. */
 export const API_BASE_URL: string = getApiBaseUrl();
 
 function buildUrl(path: string): string {
-  const base = API_BASE_URL.replace(/\/$/, '');
+  const base = getApiBaseUrl().replace(/\/$/, '');
   const suffix = path.startsWith('/') ? path : `/${path}`;
   return `${base}${suffix}`;
 }
 
 async function request(path: string, options: RequestInit = {}) {
-  // Always use the API URL, fallback to localhost if not set
-  const apiUrl = API_BASE_URL;
+  const apiUrl = getApiBaseUrl();
 
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('uniflow_token') : null;
 
@@ -24,9 +24,20 @@ async function request(path: string, options: RequestInit = {}) {
   }
 
   const response = await fetch(buildUrl(path), {
+    cache: 'no-store',
     ...options,
-    headers,
+    headers: {
+      'Cache-Control': 'no-cache',
+      ...headers,
+    },
   });
+
+  if (response.status === 304) {
+    const cachedUser = localStorage.getItem('uniflow_user');
+    if (cachedUser && path.includes('/auth/me')) {
+      return JSON.parse(cachedUser);
+    }
+  }
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');

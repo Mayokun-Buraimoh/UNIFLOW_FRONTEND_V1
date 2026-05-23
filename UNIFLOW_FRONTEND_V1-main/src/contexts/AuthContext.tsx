@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useHistory } from 'react-router-dom';
 import apiService from '../services/apiService';
 import {
@@ -43,6 +43,8 @@ interface AuthContextType {
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   clearError: () => void;
   refreshUser: () => Promise<void>;
+  /** Hydrate React auth state from localStorage (no /auth/me). Used after native OAuth redirect. */
+  applySessionFromStorage: () => void;
   adminBypass: () => void;
 }
 
@@ -342,21 +344,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithGoogle = async () => {
     try {
-      setLoading(true);
       setError(null);
-      const response = await apiAuthService.signInWithGoogle();
-      setUser(response.user);
+      // Do not set global loading — iOS opens Safari before finally runs, which stuck ProtectedRoute.
+      await apiAuthService.signInWithGoogle();
     } catch (error: any) {
+      if (error.message?.includes('Redirecting to Google OAuth')) {
+        return;
+      }
       setError(error.message);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   const logout = () => {
     apiAuthService.logout();
     clearUserScopedLocalStorage();
+    try {
+      sessionStorage.removeItem('uniflow_oauth_last_processed');
+    } catch {
+      /* ignore */
+    }
     setUser(null);
     setError(null);
     setAuthState(false);
@@ -406,7 +413,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
   };
 
-  const refreshUser = async () => {
+  const applySessionFromStorage = useCallback(() => {
+    const token = localStorage.getItem('uniflow_token');
+    const userData = localStorage.getItem('uniflow_user');
+    if (!token || !userData) return;
+    try {
+      const parsedUser = JSON.parse(userData) as User;
+      setUser(parsedUser);
+      setAuthState(true);
+      setLoading(false);
+    } catch (error) {
+      console.error('AuthContext: Failed to parse user from localStorage:', error);
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -416,13 +437,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('AuthContext: User refreshed successfully from API');
     } catch (error: any) {
       console.error('Failed to refresh user:', error);
-      // Don't set error state or logout on API failure
-      // The user might still be valid in localStorage
       console.log('AuthContext: API refresh failed, but keeping current auth state');
+      applySessionFromStorage();
     } finally {
       setLoading(false);
     }
-  };
+  }, [applySessionFromStorage]);
 
   const adminBypass = () => {
     const dummyUser: User = {
@@ -545,6 +565,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     changePassword,
     clearError,
     refreshUser,
+    applySessionFromStorage,
     adminBypass,
   };
 

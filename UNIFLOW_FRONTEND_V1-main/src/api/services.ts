@@ -1,9 +1,6 @@
 import { api } from './client';
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
-
-function backendOriginFromApiBase(): string {
-  return getApiBaseUrl().replace(/\/?api\/?$/i, '');
-}
+import { getGoogleOAuthStartUrl } from '../utils/googleOAuth';
 
 type OfflineResource = 'task' | 'event' | 'schedule' | 'studyGoals';
 type OfflineOperation = 'create' | 'update' | 'delete' | 'toggle' | 'save';
@@ -270,8 +267,7 @@ export const authService = {
   },
 
   startGoogleOAuth: () => {
-    const backendUrl = backendOriginFromApiBase();
-    window.location.href = `${backendUrl}/api/auth/google`;
+    window.location.href = getGoogleOAuthStartUrl(getApiBaseUrl());
   }
 };
 
@@ -675,8 +671,10 @@ export const courseService = {
   },
 
   createCourse: async (data: { code?: string; name: string }) => {
+    const name = String(data.name || '').trim();
+    const code = String(data.code || name).trim();
     try {
-      const res = await api.post('/courses/', data);
+      const res = await api.post('/courses/', { name, code });
       return res;
     } catch (err) {
       // Fallback: create locally
@@ -721,17 +719,31 @@ export const courseService = {
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const res = await fetch(url, { method: 'POST', headers, body: form });
-    if (!res.ok) throw new Error('Upload failed');
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      try {
+        const body = await res.json();
+        if (body?.error) message = String(body.error);
+      } catch {
+        /* ignore */
+      }
+      throw new Error(message);
+    }
     return res.json();
   },
 
   getFiles: async (courseId: string) => {
-    try {
+    const token = localStorage.getItem('uniflow_token');
+    // Signed-in: server is source of truth (local cache is cleared on logout).
+    if (token) {
       const res = await api.get(`/courses/${courseId}/files`);
       return res?.files || [];
-    } catch (err) {
+    }
+    try {
       const saved = localStorage.getItem(`uniflow_files_${courseId}`);
       return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
   },
 
