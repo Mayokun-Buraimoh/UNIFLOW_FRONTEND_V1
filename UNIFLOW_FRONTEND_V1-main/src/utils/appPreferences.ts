@@ -11,6 +11,7 @@ export const APP_PREFERENCES_UPDATED_EVENT = 'uniflow_app_preferences_updated';
 const STORAGE_KEY = 'uniflow_app_preferences_cache';
 
 export interface CachedAppPreferences {
+  defaultLanguage?: string;
   defaultStartPage?: string;
   weekStart?: WeekStartPreference;
 }
@@ -29,6 +30,7 @@ export function readCachedAppPreferences(): CachedAppPreferences {
     if (!raw) return {};
     const o = JSON.parse(raw) as Record<string, unknown>;
     return {
+      defaultLanguage: typeof o.defaultLanguage === 'string' ? o.defaultLanguage : undefined,
       defaultStartPage: typeof o.defaultStartPage === 'string' ? o.defaultStartPage : undefined,
       weekStart: o.weekStart === 'Sunday' || o.weekStart === 'Monday' ? o.weekStart : undefined,
     };
@@ -50,6 +52,9 @@ export function cacheAppPreferencesFromProfile(preferences: Record<string, unkno
   if (!preferences || typeof preferences !== 'object') return;
   const prev = readCachedAppPreferences();
   const next: CachedAppPreferences = { ...prev };
+  if (typeof preferences.defaultLanguage === 'string') {
+    next.defaultLanguage = preferences.defaultLanguage;
+  }
   if (typeof preferences.defaultStartPage === 'string') {
     next.defaultStartPage = preferences.defaultStartPage;
   }

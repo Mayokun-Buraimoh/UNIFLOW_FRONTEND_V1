@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { planService } from '../api/services';
 
 export interface Plan {
-  id: number;
+  id: string;
   title: string;
   description?: string;
   createdAt: string;
@@ -46,7 +46,7 @@ export const usePlans = () => {
   }, []);
 
   // Update a plan
-  const updatePlan = useCallback(async (id: number, planData: Partial<Plan>) => {
+  const updatePlan = useCallback(async (id: string, planData: Partial<Plan>) => {
     try {
       setLoading(true);
       setError(null);
@@ -62,7 +62,7 @@ export const usePlans = () => {
   }, []);
 
   // Delete a plan
-  const deletePlan = useCallback(async (id: number) => {
+  const deletePlan = useCallback(async (id: string) => {
     try {
       setLoading(true);
       setError(null);

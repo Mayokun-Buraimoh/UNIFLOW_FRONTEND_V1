@@ -23,6 +23,13 @@
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* UniFlow Productivity.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "UniFlow Productivity.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		91A7EE015C9247F3A1A10101 /* RubyWakePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RubyWakePlugin.swift; sourceTree = "<group>"; };
+		91A7EE015C9247F3A1A10102 /* RubyWakePlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RubyWakePlugin.m; sourceTree = "<group>"; };
+		91B7EE015C9247F3A1B10101 /* SensoryWakePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensoryWakePlugin.swift; sourceTree = "<group>"; };
+		91B7EE015C9247F3A1B10102 /* SensoryWakePlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SensoryWakePlugin.m; sourceTree = "<group>"; };
+		91B7EE015C9247F3A1B10103 /* SensoryWakeBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = SensoryWakeBridge.mm; sourceTree = "<group>"; };
+		91B7EE015C9247F3A1B10104 /* SensoryWakeBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SensoryWakeBridge.h; sourceTree = "<group>"; };
+		91B7EE015C9247F3A1B10105 /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -77,6 +84,13 @@
 			children = (
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
+				91A7EE015C9247F3A1A10101 /* RubyWakePlugin.swift */,
+				91A7EE015C9247F3A1A10102 /* RubyWakePlugin.m */,
+				91B7EE015C9247F3A1B10101 /* SensoryWakePlugin.swift */,
+				91B7EE015C9247F3A1B10102 /* SensoryWakePlugin.m */,
+				91B7EE015C9247F3A1B10103 /* SensoryWakeBridge.mm */,
+				91B7EE015C9247F3A1B10104 /* SensoryWakeBridge.h */,
+				91B7EE015C9247F3A1B10105 /* App-Bridging-Header.h */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				A0CB0F4D2FB0F2E000366BE0 /* resized_1024x1024.png */,
@@ -353,13 +367,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = BXLXU2V44D;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
+				SWIFT_OBJC_BRIDGING_HEADER = App/App-Bridging-Header.h;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mayokun.uniflowapp.ios;
 				PRODUCT_NAME = "UniFlow Productivity";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -376,7 +391,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = BXLXU2V44D;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -386,6 +401,7 @@
 				PRODUCT_NAME = "UniFlow Productivity";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_OBJC_BRIDGING_HEADER = App/App-Bridging-Header.h;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

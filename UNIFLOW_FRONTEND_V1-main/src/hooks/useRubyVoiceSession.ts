@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import {
   endRubyVoiceSession,
   fetchRubyGreeting,
-  postRubyVoiceTurn,
-  postRubyVoiceTurnText,
   refreshRubyVoiceSessionSchedule,
   startRubyVoiceSession,
 } from '../api/rubyVoiceApi';
-import { startLiveCaptionRecognition } from '../services/liveCaptionRecognition';
+import {
+  RubyVoiceRealtimeClient,
+  type RubyRealtimeMutations,
+  type RubyRealtimeState,
+} from '../services/rubyVoiceRealtimeClient';
 import { readWeeklyScheduleSnapshot } from '../utils/weeklyScheduleSnapshot';
 
 export type RubyVoicePhase =
@@ -19,28 +22,15 @@ export type RubyVoicePhase =
   | 'speaking'
   | 'error';
 
-const SILENCE_MS = 2000;
-const MIN_RMS = 0.02;
-const MAX_RECORD_MS = 60_000;
-const NO_SPEECH_GIVEUP_MS = 25_000;
-const MIN_AUDIO_BYTES = 1500;
-
-function pickRecorderMime(): string | undefined {
-  const c = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4',
-  ];
-  for (const m of c) {
-    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) return m;
-  }
-  return undefined;
-}
-
-function playBase64Audio(audioBase64: string, audioMimeType: string): Promise<void> {
+function playBase64Audio(
+  audioBase64: string,
+  audioMimeType: string,
+  onAudioCreated?: (audio: HTMLAudioElement) => void
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const url = `data:${audioMimeType};base64,${audioBase64}`;
     const audio = new Audio(url);
+    onAudioCreated?.(audio);
     audio.onended = () => resolve();
     audio.onerror = () => reject(new Error('Audio playback failed'));
     void audio.play().catch(reject);
@@ -60,107 +50,17 @@ function speakFallback(text: string): Promise<void> {
   });
 }
 
-async function recordUtteranceUntilSilence(
-  cancelled: () => boolean,
-  onLiveTranscript?: (text: string) => void
-): Promise<Blob | null> {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const mime = pickRecorderMime();
-  const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-
-  const chunks: BlobPart[] = [];
-  rec.ondataavailable = (e) => {
-    if (e.data.size) chunks.push(e.data);
-  };
-
-  const ctx = new AudioContext();
-  const source = ctx.createMediaStreamSource(stream);
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 512;
-  source.connect(analyser);
-  const data = new Uint8Array(analyser.frequencyBinCount);
-
-  const liveCaptions = onLiveTranscript ? await startLiveCaptionRecognition(onLiveTranscript) : null;
-
-  return new Promise((resolve) => {
-    let silenceStart: number | null = null;
-    let speechDetected = false;
-    let raf = 0;
-    const recordStart = performance.now();
-
-    const stopAll = () => {
-      liveCaptions?.stop();
-      cancelAnimationFrame(raf);
-      if (rec.state !== 'inactive') {
-        try {
-          rec.stop();
-        } catch {
-          /* noop */
-        }
-      }
-      stream.getTracks().forEach((t) => t.stop());
-      void ctx.close().catch(() => undefined);
-    };
-
-    rec.onstop = () => {
-      const blob = new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' });
-      resolve(blob.size >= MIN_AUDIO_BYTES ? blob : null);
-    };
-
-    const tick = () => {
-      if (cancelled()) {
-        stopAll();
-        resolve(null);
-        return;
-      }
-
-      analyser.getByteTimeDomainData(data);
-      let sum = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = (data[i]! - 128) / 128;
-        sum += v * v;
-      }
-      const rms = Math.sqrt(sum / data.length);
-
-      const now = performance.now();
-
-      if (rms >= MIN_RMS) {
-        speechDetected = true;
-        silenceStart = null;
-      } else if (speechDetected) {
-        if (silenceStart === null) silenceStart = now;
-        else if (now - silenceStart >= SILENCE_MS) {
-          stopAll();
-          return;
-        }
-      } else if (!speechDetected && now - recordStart >= NO_SPEECH_GIVEUP_MS) {
-        stopAll();
-        return;
-      }
-
-      if (now - recordStart > MAX_RECORD_MS) {
-        stopAll();
-        return;
-      }
-
-      raf = requestAnimationFrame(tick);
-    };
-
-    try {
-      rec.start(120);
-    } catch {
-      stopAll();
-      resolve(null);
-      return;
-    }
-    raf = requestAnimationFrame(tick);
-  });
-}
-
-function extensionForMime(mime: string): string {
-  if (mime.includes('webm')) return 'webm';
-  if (mime.includes('mp4') || mime.includes('m4a')) return 'm4a';
-  return 'webm';
+function mapRealtimeStateToPhase(state: RubyRealtimeState): RubyVoicePhase {
+  switch (state) {
+    case 'listening':
+      return 'listening';
+    case 'processing':
+      return 'thinking';
+    case 'responding':
+      return 'speaking';
+    default:
+      return 'idle';
+  }
 }
 
 export interface UseRubyVoiceSessionOptions {
@@ -192,28 +92,98 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
 
   const sessionIdRef = useRef<string | null>(null);
   const cancelledRef = useRef(false);
+  const realtimeClientRef = useRef<RubyVoiceRealtimeClient | null>(null);
+  const assistantMessageRef = useRef('');
+  const audioQueueRef = useRef<Array<{ text: string; audioBase64: string; audioMimeType: string }>>([]);
+  const audioPlayingRef = useRef(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const dispatchMutations = useCallback((m: { tasks: boolean; events: boolean }) => {
+  const dispatchMutations = useCallback((m: RubyRealtimeMutations) => {
     if (m.tasks) window.dispatchEvent(new Event('uniflow_tasks_updated'));
     if (m.events) window.dispatchEvent(new Event('uniflow_events_updated'));
+    if (m.plans) window.dispatchEvent(new Event('uniflow_plans_updated'));
+    if (m.courses) window.dispatchEvent(new Event('uniflow_courses_updated'));
+    if (m.schedule) window.dispatchEvent(new Event('weeklyScheduleUpdated'));
   }, []);
 
   const playReply = useCallback(async (message: string, audioBase64: string, audioMimeType: string) => {
     try {
-      await playBase64Audio(audioBase64, audioMimeType);
+      await playBase64Audio(audioBase64, audioMimeType, (audio) => {
+        currentAudioRef.current = audio;
+      });
     } catch (e) {
       console.warn('Ruby TTS playback failed, using speech fallback', e);
       await speakFallback(message);
+    } finally {
+      currentAudioRef.current = null;
     }
   }, []);
+
+  const stopAudioPlayback = useCallback(() => {
+    audioQueueRef.current = [];
+    if (currentAudioRef.current) {
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+      } catch {
+        /* noop */
+      }
+      currentAudioRef.current = null;
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        /* noop */
+      }
+    }
+    audioPlayingRef.current = false;
+  }, []);
+
+  const drainAudioQueue = useCallback(async () => {
+    if (audioPlayingRef.current) return;
+    audioPlayingRef.current = true;
+    try {
+      while (audioQueueRef.current.length > 0 && !cancelledRef.current) {
+        const next = audioQueueRef.current.shift();
+        if (!next) continue;
+        setPhase('speaking');
+        await playReply(next.text, next.audioBase64, next.audioMimeType);
+      }
+    } finally {
+      audioPlayingRef.current = false;
+      if (!cancelledRef.current) setPhase('listening');
+    }
+  }, [playReply]);
+
+  const handleMutations = useCallback(
+    (mutations?: RubyRealtimeMutations) => {
+      if (!mutations) return;
+      dispatchMutations({
+        tasks: !!mutations.tasks,
+        events: !!mutations.events,
+        plans: !!mutations.plans,
+        courses: !!mutations.courses,
+        schedule: !!mutations.schedule,
+      });
+    },
+    [dispatchMutations]
+  );
 
   useEffect(() => {
     onPhaseForNav?.(mapRubyPhaseToAssistantPhase(phase));
   }, [phase, onPhaseForNav]);
 
   useEffect(() => {
+    assistantMessageRef.current = assistantMessage;
+  }, [assistantMessage]);
+
+  useEffect(() => {
     if (!open) {
       cancelledRef.current = true;
+      stopAudioPlayback();
+      void realtimeClientRef.current?.stop().catch(() => undefined);
+      realtimeClientRef.current = null;
       const sid = sessionIdRef.current;
       sessionIdRef.current = null;
       if (sid) void endRubyVoiceSession(sid).catch(() => undefined);
@@ -281,32 +251,57 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
           }
         }
 
-        while (!cancelledRef.current && sessionIdRef.current) {
-          setPhase('listening');
-          setTranscript('');
-          const blob = await recordUtteranceUntilSilence(
-            () => cancelledRef.current,
-            (live) => {
-              if (!cancelledRef.current) setTranscript(live);
+        const realtimeClient = new RubyVoiceRealtimeClient({
+          sessionId: session_id,
+          timezone: tz,
+          weeklySchedule,
+          onTranscriptPartial: (text) => {
+            if (!cancelledRef.current) setTranscript(text);
+          },
+          onTranscriptFinal: (text) => {
+            if (!cancelledRef.current) setTranscript(text);
+          },
+          onAssistantPartial: (text) => {
+            if (!cancelledRef.current) {
+              setAssistantMessage(text);
+              setPhase('thinking');
             }
-          );
-          if (cancelledRef.current) break;
-          if (!blob) {
-            continue;
-          }
+          },
+          onAssistantMutations: (mutations) => {
+            if (cancelledRef.current) return;
+            handleMutations(mutations);
+          },
+          onAssistantFinal: (text, mutations) => {
+            if (cancelledRef.current) return;
+            setAssistantMessage(text);
+            handleMutations(mutations);
+          },
+          onAssistantAudio: (audioBase64, audioMimeType) => {
+            if (cancelledRef.current) return;
+            audioQueueRef.current.push({
+              text: assistantMessageRef.current || '...',
+              audioBase64,
+              audioMimeType,
+            });
+            void drainAudioQueue();
+          },
+          onAssistantInterrupted: () => {
+            stopAudioPlayback();
+            if (!cancelledRef.current) setPhase('listening');
+          },
+          onState: (state) => {
+            if (cancelledRef.current) return;
+            setPhase(mapRealtimeStateToPhase(state));
+          },
+          onError: (message) => {
+            if (cancelledRef.current) return;
+            setError(message);
+            setPhase('error');
+          },
+        });
 
-          setPhase('uploading');
-          const turn = await postRubyVoiceTurn(sessionIdRef.current, blob, `ruby.${extensionForMime(blob.type)}`);
-          if (cancelledRef.current) break;
-
-          setTranscript(turn.transcript);
-          setAssistantMessage(turn.message);
-          dispatchMutations(turn.mutations);
-
-          setPhase('thinking');
-          setPhase('speaking');
-          await playReply(turn.message, turn.audioBase64, turn.audioMimeType);
-        }
+        realtimeClientRef.current = realtimeClient;
+        await realtimeClient.start();
       } catch (e) {
         if (cancelledRef.current) return;
         const msg = e instanceof Error ? e.message : 'Ruby session failed';
@@ -331,37 +326,34 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
     void run();
     return () => {
       cancelledRef.current = true;
+      stopAudioPlayback();
       window.removeEventListener('weeklyScheduleUpdated', onScheduleUpdated);
+      void realtimeClientRef.current?.stop().catch(() => undefined);
+      realtimeClientRef.current = null;
       const sid = sessionIdRef.current;
       sessionIdRef.current = null;
       if (sid) void endRubyVoiceSession(sid).catch(() => undefined);
     };
-  }, [open, userId, dispatchMutations, playReply]);
+  }, [open, userId, playReply, handleMutations, drainAudioQueue, stopAudioPlayback]);
 
   const submitText = useCallback(
     async (text: string) => {
       const q = text.trim();
-      if (!q || !sessionIdRef.current || cancelledRef.current) return;
+      if (!q || !sessionIdRef.current || cancelledRef.current || !realtimeClientRef.current) return;
       try {
         setPhase('thinking');
         setTranscript(q);
-        const turn = await postRubyVoiceTurnText(sessionIdRef.current, q);
-        if (cancelledRef.current) return;
-        setAssistantMessage(turn.message);
-        dispatchMutations(turn.mutations);
-        setPhase('speaking');
-        await playReply(turn.message, turn.audioBase64, turn.audioMimeType);
-        if (!cancelledRef.current) {
-          setPhase('idle');
-          setError(null);
-        }
+        stopAudioPlayback();
+        realtimeClientRef.current.interruptAssistant();
+        realtimeClientRef.current.submitText(q);
+        if (!cancelledRef.current) setError(null);
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Request failed';
         setError(msg);
         setPhase('error');
       }
     },
-    [dispatchMutations, playReply]
+    [stopAudioPlayback]
   );
 
   return {

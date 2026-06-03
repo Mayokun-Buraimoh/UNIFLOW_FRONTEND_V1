@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useIonRouter } from '@ionic/react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { useLongPress } from '../hooks/useLongPress';
-import VoiceAssistantOverlay, { type AssistantPhase } from './voice-assistant/VoiceAssistantOverlay';
+import { useRubyVoice } from '../contexts/RubyVoiceContext';
 import './BottomNavigation.css';
 
 interface BottomNavigationProps {
@@ -13,17 +12,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
   const ionRouter = useIonRouter();
   const history = useHistory();
   const location = useLocation();
-  const [voiceAssistantOpen, setVoiceAssistantOpen] = useState(false);
-  const [voicePhase, setVoicePhase] = useState<AssistantPhase>('idle');
-  const [voiceClosing, setVoiceClosing] = useState(false);
+  const { open: voiceAssistantOpen, closing: voiceClosing, phase: voicePhase } = useRubyVoice();
   const centralChatRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!voiceAssistantOpen) {
-      setVoicePhase('idle');
-      setVoiceClosing(false);
-    }
-  }, [voiceAssistantOpen]);
 
   /** Root tabs: replace Ionic stack so a previous /course/:id page cannot stay visible under a highlighted tab. */
   const navigateToMainTab = useCallback(
@@ -43,7 +33,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
         }
       }
     },
-    [history, ionRouter],
+    [history, ionRouter]
   );
 
   const navigateForward = useCallback(
@@ -63,19 +53,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
         }
       }
     },
-    [history, ionRouter],
+    [history, ionRouter]
   );
-
-  const openVoiceAssistant = useCallback(() => {
-    setVoiceAssistantOpen(true);
-    requestAnimationFrame(() => {
-      centralChatRef.current?.blur();
-    });
-  }, []);
-
-  const closeVoiceAssistant = useCallback(() => {
-    setVoiceAssistantOpen(false);
-  }, []);
 
   const navigateChatbot = useCallback(() => {
     navigateForward('/chatbot');
@@ -83,13 +62,6 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
       centralChatRef.current?.blur();
     });
   }, [navigateForward]);
-
-  const chatbotLongPress = useLongPress({
-    onLongPress: openVoiceAssistant,
-    onShortPress: navigateChatbot,
-    durationMs: 750,
-    moveThresholdPx: 12
-  });
 
   const isActive = (path: string) => {
     const { pathname } = location;
@@ -104,13 +76,6 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
 
   return (
     <div className={`bottom-nav ${voiceAssistantOpen ? 'bottom-nav--voice-mode' : ''}`}>
-      <VoiceAssistantOverlay
-        open={voiceAssistantOpen}
-        onClose={closeVoiceAssistant}
-        onPhaseChange={setVoicePhase}
-        onClosingChange={setVoiceClosing}
-      />
-
       {/* Home */}
       <div
         className={`nav-item ${isActive('/home') ? 'active' : ''}`}
@@ -139,7 +104,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
         <span>Plans</span>
       </div>
 
-      {/* Central chatbot button — tap: chatbot, long-press ~0.75s: voice overlay */}
+      {/* Central chatbot button — tap: chatbot only. Ruby activates by wake phrase globally. */}
       <div className="central-button-wrapper">
         <img
           src="/assets/icons/icons2/Subtract_icon.svg"
@@ -153,20 +118,20 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
             voiceOnboardingActive && 'voice-onboarding-highlight',
             voiceAssistantOpen && 'voice-hub--active',
             voiceAssistantOpen && `voice-hub--phase-${voicePhase}`,
-            voiceAssistantOpen && voiceClosing && 'voice-hub--closing'
+            voiceAssistantOpen && voiceClosing && 'voice-hub--closing',
           ]
             .filter(Boolean)
             .join(' ')}
           role="button"
           tabIndex={0}
-          aria-label="Chatbot. Hold for voice assistant."
+          aria-label="Chatbot. Say Hey Ruby for voice assistant."
+          onClick={navigateChatbot}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               navigateChatbot();
             }
           }}
-          {...chatbotLongPress}
         >
           <div className="nav-icon">
             {voiceAssistantOpen && !voiceClosing && (

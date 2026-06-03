@@ -2,7 +2,7 @@ import { api } from './client';
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
 import { getGoogleOAuthStartUrl } from '../utils/googleOAuth';
 
-type OfflineResource = 'task' | 'event' | 'schedule' | 'studyGoals';
+type OfflineResource = 'task' | 'event' | 'schedule' | 'studyGoals' | 'plan';
 type OfflineOperation = 'create' | 'update' | 'delete' | 'toggle' | 'save';
 
 interface OfflineAction {
@@ -78,6 +78,23 @@ function writeLocalEvents(events: Event[]): void {
   localStorage.setItem('uniflow_events', JSON.stringify(events));
 }
 
+function readLocalPlans(): any[] {
+  if (!canUseBrowserStorage()) return [];
+  try {
+    const raw = localStorage.getItem('uniflow_plans') || localStorage.getItem('customPlans');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalPlans(plans: any[]): void {
+  if (!canUseBrowserStorage()) return;
+  localStorage.setItem('uniflow_plans', JSON.stringify(plans));
+}
+
 async function flushOfflineQueue(): Promise<void> {
   if (isFlushingOfflineQueue || !canUseBrowserStorage()) return;
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) return;
@@ -134,6 +151,26 @@ async function flushOfflineQueue(): Promise<void> {
           }
         } else if (action.resource === 'schedule' && action.operation === 'save') {
           await api.put('/schedule/', { data: action.payload });
+        } else if (action.resource === 'plan') {
+          const currentId = action.entityId ? idMap.get(action.entityId) || action.entityId : undefined;
+          if (action.operation === 'create') {
+            const { localId, ...body } = action.payload || {};
+            const created = await api.post('/plans/', body);
+            const plan = created?.plan ?? created;
+            if (localId && plan?.id) {
+              idMap.set(localId, plan.id);
+              const local = readLocalPlans();
+              const idx = local.findIndex((p) => String(p.id) === String(localId));
+              if (idx !== -1) {
+                local[idx] = { ...local[idx], ...plan, id: plan.id };
+                writeLocalPlans(local);
+              }
+            }
+          } else if (currentId && action.operation === 'update') {
+            await api.patch(`/plans/${currentId}`, action.payload);
+          } else if (currentId && action.operation === 'delete') {
+            await api.delete(`/plans/${currentId}`);
+          }
         } else if (action.resource === 'studyGoals' && action.operation === 'save') {
           await api.patch('/profiles/study-goals', { studyGoals: action.payload });
           localStorage.removeItem(OFFLINE_STUDY_GOALS_KEY);
@@ -763,47 +800,112 @@ export const courseService = {
   }
 };
 
-// Plan Service (for custom plans)
+// Plan Service (local-first with server sync — Ruby reads DB only on the backend)
 export const planService = {
   getPlans: async (): Promise<any[]> => {
-    // Get plans from localStorage for now
-    const plans = localStorage.getItem('customPlans');
-    return plans ? JSON.parse(plans) : [];
-  },
-
-  createPlan: async (planData: { title: string; description?: string }): Promise<any> => {
-    // Create plan in localStorage for now
-    const plans = JSON.parse(localStorage.getItem('customPlans') || '[]');
-    const newPlan = {
-      id: Date.now(),
-      ...planData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    plans.push(newPlan);
-    localStorage.setItem('customPlans', JSON.stringify(plans));
-    return newPlan;
-  },
-
-  updatePlan: async (id: number, planData: Partial<any>): Promise<any> => {
-    // Update plan in localStorage for now
-    const plans = JSON.parse(localStorage.getItem('customPlans') || '[]');
-    const planIndex = plans.findIndex((plan: any) => plan.id === id);
-    if (planIndex !== -1) {
-      plans[planIndex] = { ...plans[planIndex], ...planData, updatedAt: new Date().toISOString() };
-      localStorage.setItem('customPlans', JSON.stringify(plans));
-      return plans[planIndex];
+    try {
+      const res = await api.get('/plans/');
+      const plans = res.plans || [];
+      writeLocalPlans(plans);
+      return plans;
+    } catch (error) {
+      return readLocalPlans();
     }
-    throw new Error('Plan not found');
   },
 
-  deletePlan: async (id: number): Promise<{ message: string }> => {
-    // Delete plan from localStorage for now
-    const plans = JSON.parse(localStorage.getItem('customPlans') || '[]');
-    const filteredPlans = plans.filter((plan: any) => plan.id !== id);
-    localStorage.setItem('customPlans', JSON.stringify(filteredPlans));
-    return { message: 'Plan deleted successfully' };
-  }
+  getPlan: async (id: string): Promise<any> => {
+    try {
+      const res = await api.get(`/plans/${id}`);
+      return res.plan;
+    } catch (error) {
+      const plan = readLocalPlans().find((p) => String(p.id) === String(id));
+      if (plan) return plan;
+      throw new Error('Plan not found');
+    }
+  },
+
+  createPlan: async (planData: {
+    title: string;
+    isCustom?: boolean;
+    bannerImage?: string | null;
+    description?: string;
+  }): Promise<any> => {
+    try {
+      const res = await api.post('/plans/', planData);
+      const plan = res.plan;
+      const local = readLocalPlans();
+      writeLocalPlans([plan, ...local.filter((p) => String(p.id) !== String(plan.id))]);
+      return plan;
+    } catch (error) {
+      if (!isOfflineError(error)) throw error;
+      const localId = Date.now().toString();
+      const newPlan = {
+        id: localId,
+        title: planData.title,
+        isCustom: planData.isCustom ?? true,
+        bannerImage: planData.bannerImage ?? null,
+        targets: [],
+        tasks: [],
+        progress: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const plans = readLocalPlans();
+      plans.unshift(newPlan);
+      writeLocalPlans(plans);
+      enqueueOfflineAction({
+        resource: 'plan',
+        operation: 'create',
+        payload: { ...planData, localId },
+      });
+      return newPlan;
+    }
+  },
+
+  updatePlan: async (id: string, planData: Partial<any>): Promise<any> => {
+    try {
+      const res = await api.patch(`/plans/${id}`, planData);
+      const plan = res.plan;
+      const plans = readLocalPlans();
+      const idx = plans.findIndex((p) => String(p.id) === String(id));
+      if (idx !== -1) {
+        plans[idx] = { ...plans[idx], ...plan };
+        writeLocalPlans(plans);
+      }
+      return plan;
+    } catch (error) {
+      if (!isOfflineError(error)) throw error;
+      const plans = readLocalPlans();
+      const idx = plans.findIndex((p) => String(p.id) === String(id));
+      if (idx === -1) throw new Error('Plan not found');
+      plans[idx] = { ...plans[idx], ...planData, updatedAt: new Date().toISOString() };
+      writeLocalPlans(plans);
+      enqueueOfflineAction({
+        resource: 'plan',
+        operation: 'update',
+        entityId: id,
+        payload: planData,
+      });
+      return plans[idx];
+    }
+  },
+
+  deletePlan: async (id: string): Promise<{ message: string }> => {
+    try {
+      await api.delete(`/plans/${id}`);
+      writeLocalPlans(readLocalPlans().filter((p) => String(p.id) !== String(id)));
+      return { message: 'Plan deleted successfully' };
+    } catch (error) {
+      if (!isOfflineError(error)) throw error;
+      writeLocalPlans(readLocalPlans().filter((p) => String(p.id) !== String(id)));
+      enqueueOfflineAction({
+        resource: 'plan',
+        operation: 'delete',
+        entityId: id,
+      });
+      return { message: 'Plan deleted locally' };
+    }
+  },
 };
 
 // Export all services

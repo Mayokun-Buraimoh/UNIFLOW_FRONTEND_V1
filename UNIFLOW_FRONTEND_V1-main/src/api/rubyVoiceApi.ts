@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
 import type { WeeklyScheduleSnapshot } from '../utils/weeklyScheduleSnapshot';
+import { getBearerAuthToken } from '../utils/authToken';
 
 export interface RubyVoiceSessionStart {
   session_id: string;
@@ -28,7 +29,7 @@ function buildUrl(path: string): string {
 }
 
 function bearerHeaders(json = true): HeadersInit {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('uniflow_token') : null;
+  const token = getBearerAuthToken();
   const h: Record<string, string> = {};
   if (json) h['Content-Type'] = 'application/json';
   if (token) h['Authorization'] = `Bearer ${token}`;
@@ -92,7 +93,7 @@ export async function postRubyVoiceTurn(sessionId: string, audioBlob: Blob, file
   form.append('session_id', sessionId);
   form.append('audio', audioBlob, filename);
 
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('uniflow_token') : null;
+  const token = getBearerAuthToken();
   const headers: HeadersInit = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 

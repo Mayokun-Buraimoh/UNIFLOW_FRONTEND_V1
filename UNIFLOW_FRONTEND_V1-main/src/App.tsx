@@ -10,6 +10,8 @@ import { SubscriptionProvider } from './contexts/SubscriptionContext';
 import { TaskProviderGate } from './contexts/TaskContext';
 import { EventProviderGate } from './contexts/EventContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import RubyNavigationBridge from './components/RubyNavigationBridge';
+import { RubyVoiceProvider } from './contexts/RubyVoiceContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Splash from './pages/Splash';
 import Onboarding from './pages/Onboarding';
@@ -229,11 +231,13 @@ const App: React.FC = () => {
       <IonApp>
         <IonReactRouter>
           <AuthProvider>
+            <RubyVoiceProvider>
             <StreakActivityTracker />
             <GoogleOAuthAppUrlListener />
             <GlobalLeftSwipeBack />
             <StatusBarController />
             <ClassNotificationSync />
+            <RubyNavigationBridge />
             <SubscriptionProvider>
               <PlanProvider>
                 <TaskProviderGate>
@@ -296,6 +300,7 @@ const App: React.FC = () => {
                 </TaskProviderGate>
               </PlanProvider>
             </SubscriptionProvider>
+            </RubyVoiceProvider>
           </AuthProvider>
         </IonReactRouter>
       </IonApp>

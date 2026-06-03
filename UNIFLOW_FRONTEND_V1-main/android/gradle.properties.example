@@ -1,0 +1,6 @@
+# Copy relevant lines into android/gradle.properties after obtaining the Sensory TrulyNatural SDK.
+#
+# sensory.enabled=true
+# snsr.root=/Users/you/Sensory/TrulyNaturalSDK/7.7.0
+# snsr.lib.version=7.7.0
+# snsr.lib.type=tnl

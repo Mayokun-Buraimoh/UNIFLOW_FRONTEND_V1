@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from '../constants/apiBaseUrl';
+import { getBearerAuthToken } from '../utils/authToken';
 
 /** @deprecated Prefer getApiBaseUrl() — value can differ on web vs Capacitor. */
 export const API_BASE_URL: string = getApiBaseUrl();
@@ -12,7 +13,7 @@ function buildUrl(path: string): string {
 async function request(path: string, options: RequestInit = {}) {
   const apiUrl = getApiBaseUrl();
 
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('uniflow_token') : null;
+  const token = getBearerAuthToken();
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

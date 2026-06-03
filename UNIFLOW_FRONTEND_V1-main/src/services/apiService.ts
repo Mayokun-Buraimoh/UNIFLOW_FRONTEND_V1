@@ -1,6 +1,7 @@
 // API Service for backend communication
 import config from '../config/environment';
 import { getGoogleOAuthStartUrl } from '../utils/googleOAuth';
+import { getBearerAuthToken } from '../utils/authToken';
 
 const API_BASE_URL = config.API_BASE_URL;
 
@@ -53,7 +54,7 @@ class ApiService {
     };
 
     // Add auth token if available (but not for login/register requests)
-    const token = localStorage.getItem('uniflow_token');
+    const token = getBearerAuthToken();
     const isAuthRequest = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
     
     if (token && !isAuthRequest) {

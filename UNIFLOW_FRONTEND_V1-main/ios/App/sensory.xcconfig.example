@@ -1,0 +1,9 @@
+// Copy to sensory.xcconfig and set paths after installing the Sensory TrulyNatural SDK.
+// Then in Xcode: Project → Info → Configurations → set App target Debug/Release to use sensory.xcconfig
+// Or run: npm run setup:sensory (writes sensory.xcconfig when SNSR_ROOT is set)
+
+SNSR_ROOT = $(HOME)/Sensory/TrulyNaturalSDK/7.7.0
+HEADER_SEARCH_PATHS = $(inherited) $(SNSR_ROOT)/include
+LIBRARY_SEARCH_PATHS = $(inherited) $(SNSR_ROOT)/lib/ios
+OTHER_LDFLAGS = $(inherited) -lsnsr
+FRAMEWORK_SEARCH_PATHS = $(inherited)

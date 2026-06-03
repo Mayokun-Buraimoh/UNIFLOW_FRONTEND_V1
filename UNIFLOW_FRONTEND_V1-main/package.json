@@ -16,7 +16,10 @@
     "ionic:open:ios": "ionic capacitor open ios",
     "ionic:open:android": "ionic capacitor open android",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:open": "npm run ios:sync && npx cap open ios"
+    "ios:open": "npm run ios:sync && npx cap open ios",
+    "setup:openwakeword": "node scripts/setup-openwakeword-ort.mjs",
+    "setup:hey-ruby-models": "node scripts/setup-hey-ruby-models.mjs",
+    "setup:sensory": "node scripts/setup-sensory.mjs"
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "^7.0.1",
@@ -36,6 +39,8 @@
     "i18next": "^25.8.18",
     "ionicons": "^7.4.0",
     "jspdf": "^4.2.1",
+    "onnxruntime-web": "^1.26.0",
+    "openwakeword-wasm-browser": "^0.1.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-i18next": "^16.5.8",

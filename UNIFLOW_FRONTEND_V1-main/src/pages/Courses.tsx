@@ -58,8 +58,38 @@ const Courses: React.FC = () => {
         setCourses([]);
       }
     };
+    const onCoursesUpdated = () => {
+      void (async () => {
+        try {
+          await syncNow();
+          const serverCourses = await services.course.getCourses();
+          if (!Array.isArray(serverCourses)) return;
+          setCourses((prev) => {
+            const formatDmy = (d: Date) =>
+              d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
+            return serverCourses.map((sc: Record<string, unknown>, idx: number) => {
+              const id = String(sc.id ?? '');
+              const existing = prev.find((c) => c.id === id);
+              return {
+                id,
+                name: String(sc.name ?? sc.code ?? 'Course'),
+                notesCount: Number(sc.fileCount ?? existing?.notesCount ?? 0),
+                lastOpened: existing?.lastOpened || formatDmy(new Date()),
+                colorTheme: (existing?.colorTheme || THEMES[idx % THEMES.length]) as Course['colorTheme'],
+              };
+            });
+          });
+        } catch {
+          reloadFromStorage();
+        }
+      })();
+    };
     window.addEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, reloadFromStorage);
-    return () => window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, reloadFromStorage);
+    window.addEventListener('uniflow_courses_updated', onCoursesUpdated);
+    return () => {
+      window.removeEventListener(USER_SCOPED_STORAGE_CLEARED_EVENT, reloadFromStorage);
+      window.removeEventListener('uniflow_courses_updated', onCoursesUpdated);
+    };
   }, []);
 
   // Drain any pending local-first course creates (e.g. after login).

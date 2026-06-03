@@ -1,0 +1,22 @@
+// Applied when sensory.enabled=true in android/gradle.properties
+// Requires TrulyNatural SDK from Sensory (https://doc.sensory.com/tnl/latest/api/build-system/)
+
+def snsrRoot = findProperty('snsr.root') ?: System.getenv('SNSR_ROOT') ?: ''
+def snsrVersion = findProperty('snsr.lib.version') ?: '7.7.0'
+def snsrLibType = findProperty('snsr.lib.type') ?: 'tnl'
+
+if (!snsrRoot) {
+    throw new GradleException(
+        'snsr.root is required when sensory.enabled=true. Run: npm run setup:sensory'
+    )
+}
+
+repositories {
+    maven {
+        url = uri("${snsrRoot}/m2repository")
+    }
+}
+
+dependencies {
+    implementation "com.sensory.speech.snsr:${snsrLibType}:${snsrVersion}@aar"
+}
