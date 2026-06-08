@@ -20,6 +20,7 @@ import {
   type WakePhraseListenerOptions,
 } from '../services/rubyWakeListening';
 import {
+  RUBY_WAKE_LEGACY_PREF_KEY,
   RUBY_OPEN_EVENT,
   RUBY_WAKE_DEFAULT_ENABLED,
   RUBY_WAKE_PREF_CHANGED_EVENT,
@@ -31,15 +32,23 @@ export interface RubyVoiceContextValue {
   open: boolean;
   closing: boolean;
   phase: AssistantPhase;
+  rubyWakeEnabled: boolean;
   openVoiceAssistant: () => void;
   closeVoiceAssistant: () => void;
+  setRubyListeningEnabled: (enabled: boolean) => void;
+  toggleRubyListening: () => void;
 }
 
 const RubyVoiceContext = createContext<RubyVoiceContextValue | undefined>(undefined);
 
 function readRubyWakeEnabled(): boolean {
   const raw = localStorage.getItem(RUBY_WAKE_PREF_KEY);
-  return raw == null ? RUBY_WAKE_DEFAULT_ENABLED : raw === 'true';
+  if (raw != null) return raw === 'true';
+  const legacyRaw = localStorage.getItem(RUBY_WAKE_LEGACY_PREF_KEY);
+  if (legacyRaw != null) {
+    localStorage.setItem(RUBY_WAKE_PREF_KEY, legacyRaw);
+  }
+  return legacyRaw == null ? RUBY_WAKE_DEFAULT_ENABLED : legacyRaw === 'true';
 }
 
 const RubyVoiceProviderInner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -74,13 +83,41 @@ const RubyVoiceProviderInner: React.FC<{ children: React.ReactNode }> = ({ child
   }, [open]);
 
   const openVoiceAssistant = useCallback(() => {
-    if (open || closing || !isPageVisible()) return;
+    if (!rubyWakeEnabled || open || closing || !isPageVisible()) return;
     setOpen(true);
-  }, [closing, isPageVisible, open]);
+  }, [closing, isPageVisible, open, rubyWakeEnabled]);
 
   const closeVoiceAssistant = useCallback(() => {
     setOpen(false);
   }, []);
+
+  const setRubyListeningEnabled = useCallback((nextEnabled: boolean) => {
+    setRubyWakeEnabled(nextEnabled);
+    try {
+      localStorage.setItem(RUBY_WAKE_PREF_KEY, String(nextEnabled));
+      window.dispatchEvent(new Event(RUBY_WAKE_PREF_CHANGED_EVENT));
+    } catch {
+      /* localStorage unavailable — state still updates for this session */
+    }
+
+    if (!nextEnabled) {
+      wakeListenerRunningRef.current = false;
+      wakeMicUnavailableRef.current = false;
+      wakeToastShownRef.current = false;
+      setPhase('idle');
+      setClosing(false);
+      setOpen(false);
+      void stopWakePhraseListening();
+      return;
+    }
+
+    wakeMicUnavailableRef.current = false;
+    wakeToastShownRef.current = false;
+  }, []);
+
+  const toggleRubyListening = useCallback(() => {
+    setRubyListeningEnabled(!rubyWakeEnabled);
+  }, [rubyWakeEnabled, setRubyListeningEnabled]);
 
   const openVoiceAssistantFromWake = useCallback(() => {
     if (!rubyWakeEnabled || open || closing || !isPageVisible()) {
@@ -287,10 +324,22 @@ const RubyVoiceProviderInner: React.FC<{ children: React.ReactNode }> = ({ child
       open,
       closing,
       phase,
+      rubyWakeEnabled,
       openVoiceAssistant,
       closeVoiceAssistant,
+      setRubyListeningEnabled,
+      toggleRubyListening,
     }),
-    [open, closing, phase, openVoiceAssistant, closeVoiceAssistant]
+    [
+      open,
+      closing,
+      phase,
+      rubyWakeEnabled,
+      openVoiceAssistant,
+      closeVoiceAssistant,
+      setRubyListeningEnabled,
+      toggleRubyListening,
+    ]
   );
 
   return (
@@ -324,10 +373,13 @@ export function useRubyVoice(): RubyVoiceContextValue {
       open: false,
       closing: false,
       phase: 'idle',
+      rubyWakeEnabled: readRubyWakeEnabled(),
       openVoiceAssistant: () => {
         window.dispatchEvent(new Event(RUBY_OPEN_EVENT));
       },
       closeVoiceAssistant: () => undefined,
+      setRubyListeningEnabled: () => undefined,
+      toggleRubyListening: () => undefined,
     };
   }
   return ctx;

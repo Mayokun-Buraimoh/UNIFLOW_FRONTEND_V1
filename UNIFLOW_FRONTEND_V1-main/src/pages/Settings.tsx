@@ -1,6 +1,7 @@
 import { IonContent, IonPage, useIonRouter } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRubyVoice } from '../contexts/RubyVoiceContext';
 import './Settings.css';
 import BackButton from '../components/BackButton';
 import { useState, useEffect } from 'react';
@@ -19,6 +20,7 @@ const Settings: React.FC = () => {
   const history = useHistory();
   const ionRouter = useIonRouter();
   const { user, logoutWithConfirmation, logout } = useAuth();
+  const { rubyWakeEnabled, toggleRubyListening } = useRubyVoice();
   const { profile, updateProfile: saveProfile } = useProfile();
   const { t } = useTranslation();
 
@@ -156,6 +158,22 @@ const Settings: React.FC = () => {
             <div className="settings-section">
               <h3 className="section-title">Account Settings</h3>
               <div className="settings-card">
+                <div className="setting-item ruby-voice-setting">
+                  <div className="settings-row-text">
+                    <h3>Ruby Voice Assistant</h3>
+                    <p>Allow Ruby to listen for "Hey Ruby"</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={`ruby-settings-toggle ${rubyWakeEnabled ? 'ruby-settings-toggle--on' : 'ruby-settings-toggle--off'}`}
+                    onClick={toggleRubyListening}
+                    aria-pressed={rubyWakeEnabled}
+                    aria-label={rubyWakeEnabled ? 'Turn Ruby voice off' : 'Turn Ruby voice on'}
+                  >
+                    <span className="ruby-settings-toggle__thumb" />
+                  </button>
+                </div>
+
                 <div className="setting-item" onClick={handleNotificationPreferences}>
                   <div className="setting-icon">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="#4CAF50">

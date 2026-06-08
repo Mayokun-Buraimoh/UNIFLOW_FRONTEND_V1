@@ -10,13 +10,6 @@ import BackButton from '../components/BackButton';
 import { useBlockRightSwipe } from '../hooks/useBlockRightSwipe';
 import { writeCachedAppPreferences, type WeekStartPreference } from '../utils/appPreferences';
 import { navigateBackSafely } from '../utils/navigation';
-import { Capacitor } from '@capacitor/core';
-import {
-  RUBY_WAKE_DEFAULT_ENABLED,
-  RUBY_WAKE_PREF_CHANGED_EVENT,
-  RUBY_WAKE_PREF_KEY,
-} from '../constants/rubyWake';
-import { primeMicrophoneForWake } from '../services/rubyWakeListening';
 
 const AppPreferences: React.FC = () => {
   const history = useHistory();
@@ -27,10 +20,6 @@ const AppPreferences: React.FC = () => {
   const [defaultLanguage, setDefaultLanguage] = useState('English');
   const [defaultStartPage, setDefaultStartPage] = useState('Home');
   const [weekStart, setWeekStart] = useState('Monday');
-  const [heyRubyEnabled, setHeyRubyEnabled] = useState<boolean>(() => {
-    const raw = localStorage.getItem(RUBY_WAKE_PREF_KEY);
-    return raw == null ? RUBY_WAKE_DEFAULT_ENABLED : raw === 'true';
-  });
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Track which dropdown is currently open
@@ -86,8 +75,6 @@ const AppPreferences: React.FC = () => {
         defaultStartPage,
         weekStart: weekStart as WeekStartPreference,
       });
-      localStorage.setItem(RUBY_WAKE_PREF_KEY, heyRubyEnabled ? 'true' : 'false');
-      window.dispatchEvent(new Event(RUBY_WAKE_PREF_CHANGED_EVENT));
       console.log('App preferences updated successfully');
       navigateBackSafely(history, location.pathname, '/settings');
     } catch (error) {
@@ -167,41 +154,6 @@ const AppPreferences: React.FC = () => {
                 onToggle={() => handleToggleDropdown('weekStart')}
               />
 
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '16px 4px',
-                  borderTop: '1px solid rgba(0, 0, 0, 0.06)',
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 600, color: '#2f6d4f', marginBottom: '4px' }}>
-                    Listen for "Hey Ruby"
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#666' }}>
-                    Wake Ruby by voice while the app is open. Uses on-device &quot;Hey Ruby&quot;
-                    detection (public/models/hey_ruby.onnx).
-                  </div>
-                </div>
-                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={heyRubyEnabled}
-                    onChange={(e) => {
-                      const next = e.target.checked;
-                      setHeyRubyEnabled(next);
-                      localStorage.setItem(RUBY_WAKE_PREF_KEY, next ? 'true' : 'false');
-                      window.dispatchEvent(new Event(RUBY_WAKE_PREF_CHANGED_EVENT));
-                      if (next && Capacitor.isNativePlatform()) {
-                        void primeMicrophoneForWake();
-                      }
-                    }}
-                    style={{ width: '18px', height: '18px' }}
-                  />
-                </label>
-              </div>
             </div>
           </div>
 

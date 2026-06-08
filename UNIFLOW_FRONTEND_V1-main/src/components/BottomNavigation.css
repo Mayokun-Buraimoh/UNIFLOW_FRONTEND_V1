@@ -200,10 +200,7 @@
 }
 
 .nav-item.central.voice-onboarding-highlight .nav-icon {
-  box-shadow:
-    0 0 0 4px rgba(255, 255, 255, 0.7),
-    0 0 0 10px rgba(0, 170, 91, 0.3),
-    0 12px 26px rgba(0, 170, 91, 0.55) !important;
+  box-shadow: none !important;
   animation: voiceOnboardingPulse 1.3s ease-in-out infinite;
 }
 
@@ -252,6 +249,7 @@
   inset: 0;
   pointer-events: none;
   z-index: 0;
+  opacity: 0;
 }
 
 .voice-hub-orbit {
@@ -259,54 +257,70 @@
   left: 50%;
   top: 50%;
   margin: 0;
-  border-radius: 50%;
+  border-radius: 999px;
   pointer-events: none;
   box-sizing: border-box;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(0.75);
   transform-origin: 50% 50%;
   will-change: transform;
+  border: 1px solid rgba(87, 255, 156, 0.6);
+  box-shadow:
+    0 0 12px rgba(87, 255, 156, 0.45),
+    inset 0 0 10px rgba(87, 255, 156, 0.25);
+  opacity: 0;
 }
 
 .voice-hub-orbit--a {
-  width: 78px;
-  height: 78px;
-  border: 2px solid rgba(0, 170, 91, 0.92);
-  animation: voiceHubOrbitSpinCW 2.4s linear infinite;
-  box-shadow: 0 0 14px rgba(0, 170, 91, 0.38);
+  width: 54px;
+  height: 54px;
+  border-color: rgba(87, 255, 156, 0.72);
 }
 
 .voice-hub-orbit--b {
-  width: 92px;
-  height: 92px;
-  border: 2px dashed rgba(52, 211, 153, 0.85);
-  animation: voiceHubOrbitSpinCCW 3.8s linear infinite;
-  opacity: 0.96;
+  width: 60px;
+  height: 60px;
+  border-color: rgba(52, 211, 153, 0.52);
 }
 
 .voice-hub-orbit--c {
-  width: 106px;
-  height: 106px;
-  border: 1.5px solid rgba(110, 231, 183, 0.78);
-  animation: voiceHubOrbitSpinCW 5.5s linear infinite;
-  opacity: 0.92;
+  width: 66px;
+  height: 66px;
+  border-color: rgba(110, 231, 183, 0.42);
 }
 
-/* Rotation must include translate(-50%,-50%) or the ring drifts off the icon center */
-@keyframes voiceHubOrbitSpinCW {
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
+.nav-item.central:active .voice-hub-orbits,
+.nav-item.central.voice-hub--phase-listening:not(.voice-hub--closing) .voice-hub-orbits {
+  opacity: 1;
 }
 
-@keyframes voiceHubOrbitSpinCCW {
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
+.nav-item.central:active .voice-hub-orbit--a,
+.nav-item.central.voice-hub--phase-listening:not(.voice-hub--closing) .voice-hub-orbit--a {
+  animation: voiceHubSiriRingPulse 1.5s ease-out infinite;
+}
+
+.nav-item.central:active .voice-hub-orbit--b,
+.nav-item.central.voice-hub--phase-listening:not(.voice-hub--closing) .voice-hub-orbit--b {
+  animation: voiceHubSiriRingPulse 1.5s ease-out infinite;
+  animation-delay: 0.24s;
+}
+
+.nav-item.central:active .voice-hub-orbit--c,
+.nav-item.central.voice-hub--phase-listening:not(.voice-hub--closing) .voice-hub-orbit--c {
+  animation: voiceHubSiriRingPulse 1.5s ease-out infinite;
+  animation-delay: 0.48s;
+}
+
+@keyframes voiceHubSiriRingPulse {
+  0% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(0.7);
   }
-  to {
-    transform: translate(-50%, -50%) rotate(-360deg);
+  55% {
+    opacity: 0.38;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.25);
   }
 }
 
@@ -316,42 +330,59 @@
   z-index: 1;
   width: 68px !important;
   height: 68px !important;
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.24),
-    0 8px 18px rgba(0, 170, 91, 0.32),
-    0 8px 24px rgba(0, 0, 0, 0.2) !important;
-  transition: width 0.4s ease, height 0.4s ease, box-shadow 0.4s ease;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  transition: width 0.4s ease, height 0.4s ease;
 }
 
 .nav-item.central.voice-hub--active .nav-icon img {
   position: relative;
   z-index: 1;
-  width: 36px !important;
-  height: 36px !important;
+  width: 64px !important;
+  height: 64px !important;
 }
 
 .nav-item.central .nav-icon {
-  width: 56px !important;
-  height: 56px !important;
+  width: 64px !important;
+  height: 64px !important;
   overflow: visible;
-  background: #00AA5B !important;
-  border-radius: 50% !important;
+  background: transparent !important;
+  border-radius: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   color: white !important;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: none !important;
   border: none !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .nav-item.central .nav-icon img {
   filter: none !important;
+  width: 64px !important;
+  height: 64px !important;
+  object-fit: contain;
+  border-radius: 0;
+  display: block;
+  transform: scale(1.7);
+  transform-origin: center;
+  position: relative;
+  z-index: 4;
+}
+
+.nav-item.central:active .nav-icon img,
+.nav-item.central.voice-hub--phase-listening:not(.voice-hub--closing) .nav-icon img {
+  animation: voiceHubSiriLogoListen 1.8s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 8px rgba(64, 255, 128, 0.65))
+    drop-shadow(0 0 18px rgba(0, 180, 95, 0.45)) !important;
 }
 
 .nav-item.central:hover .nav-icon {
   transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 170, 91, 0.4) !important;
+  box-shadow: none !important;
 }
 
 .nav-item.central:active .nav-icon {
@@ -383,8 +414,8 @@
   }
 
   .nav-item.central .nav-icon {
-    width: 48px !important;
-    height: 48px !important;
+    width: 64px !important;
+    height: 64px !important;
   }
 
   .navbar-cutout {
@@ -403,22 +434,44 @@
   }
 
   .nav-item.central.voice-hub--active .nav-icon img {
-    width: 30px !important;
-    height: 30px !important;
+    width: 64px !important;
+    height: 64px !important;
   }
 
   .voice-hub-orbit--a {
-    width: 68px;
-    height: 68px;
+    width: 50px;
+    height: 50px;
   }
 
   .voice-hub-orbit--b {
-    width: 80px;
-    height: 80px;
+    width: 56px;
+    height: 56px;
   }
 
   .voice-hub-orbit--c {
-    width: 92px;
-    height: 92px;
+    width: 62px;
+    height: 62px;
+  }
+}
+
+@keyframes voiceHubSiriLogoListen {
+  0% {
+    transform: translateY(0) scale(1.6) rotate(0deg);
+  }
+  35% {
+    transform: translateY(-2px) scale(1.78) rotate(2deg);
+  }
+  70% {
+    transform: translateY(1px) scale(1.68) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(0) scale(1.6) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item.central .nav-icon img,
+  .voice-hub-orbit {
+    animation: none !important;
   }
 }

@@ -63,6 +63,16 @@ function mapRealtimeStateToPhase(state: RubyRealtimeState): RubyVoicePhase {
   }
 }
 
+function normalizeVoiceText(text: string): string {
+  return text.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function isEchoOfTranscript(message: string, transcript: string): boolean {
+  const normalizedMessage = normalizeVoiceText(message);
+  const normalizedTranscript = normalizeVoiceText(transcript);
+  return !!normalizedMessage && normalizedMessage === normalizedTranscript;
+}
+
 export interface UseRubyVoiceSessionOptions {
   open: boolean;
   userId: string | undefined;
@@ -94,6 +104,8 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
   const cancelledRef = useRef(false);
   const realtimeClientRef = useRef<RubyVoiceRealtimeClient | null>(null);
   const assistantMessageRef = useRef('');
+  const transcriptRef = useRef('');
+  const assistantEchoSuppressedRef = useRef(false);
   const audioQueueRef = useRef<Array<{ text: string; audioBase64: string; audioMimeType: string }>>([]);
   const audioPlayingRef = useRef(false);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -179,6 +191,10 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
   }, [assistantMessage]);
 
   useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+
+  useEffect(() => {
     if (!open) {
       cancelledRef.current = true;
       stopAudioPlayback();
@@ -256,13 +272,21 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
           timezone: tz,
           weeklySchedule,
           onTranscriptPartial: (text) => {
-            if (!cancelledRef.current) setTranscript(text);
+            if (!cancelledRef.current) {
+              transcriptRef.current = text;
+              setTranscript(text);
+            }
           },
           onTranscriptFinal: (text) => {
-            if (!cancelledRef.current) setTranscript(text);
+            if (!cancelledRef.current) {
+              transcriptRef.current = text;
+              setTranscript(text);
+            }
           },
           onAssistantPartial: (text) => {
             if (!cancelledRef.current) {
+              if (isEchoOfTranscript(text, transcriptRef.current)) return;
+              assistantEchoSuppressedRef.current = false;
               setAssistantMessage(text);
               setPhase('thinking');
             }
@@ -273,11 +297,25 @@ export function useRubyVoiceSession({ open, userId, onPhaseForNav }: UseRubyVoic
           },
           onAssistantFinal: (text, mutations) => {
             if (cancelledRef.current) return;
+            if (isEchoOfTranscript(text, transcriptRef.current)) {
+              assistantEchoSuppressedRef.current = true;
+              setAssistantMessage("I'm listening. What would you like me to do?");
+              handleMutations(mutations);
+              return;
+            }
+            assistantEchoSuppressedRef.current = false;
             setAssistantMessage(text);
             handleMutations(mutations);
           },
           onAssistantAudio: (audioBase64, audioMimeType) => {
             if (cancelledRef.current) return;
+            if (
+              assistantEchoSuppressedRef.current ||
+              isEchoOfTranscript(assistantMessageRef.current, transcriptRef.current)
+            ) {
+              assistantEchoSuppressedRef.current = false;
+              return;
+            }
             audioQueueRef.current.push({
               text: assistantMessageRef.current || '...',
               audioBase64,

@@ -134,17 +134,14 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
           }}
         >
           <div className="nav-icon">
-            {voiceAssistantOpen && !voiceClosing && (
-              <div className="voice-hub-orbits" aria-hidden>
-                <span className="voice-hub-orbit voice-hub-orbit--a" />
-                <span className="voice-hub-orbit voice-hub-orbit--b" />
-                <span className="voice-hub-orbit voice-hub-orbit--c" />
-              </div>
-            )}
+            <div className="voice-hub-orbits" aria-hidden>
+              <span className="voice-hub-orbit voice-hub-orbit--a" />
+              <span className="voice-hub-orbit voice-hub-orbit--b" />
+              <span className="voice-hub-orbit voice-hub-orbit--c" />
+            </div>
             <img
-              src="/assets/icons/icons2/chabot_icon.svg"
+              src="/assets/icons/icons2/chatbot2.png"
               alt="Chatbot"
-              style={{ width: '28px', height: '28px' }}
             />
           </div>
         </div>

@@ -77,23 +77,23 @@ const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
   }
 
   const hasError = !!error || rubyPhase === 'error';
+  const normalizedTranscript = transcript.trim().toLowerCase();
+  const normalizedAssistantMessage = assistantMessage.trim().toLowerCase();
+  const visibleAssistantMessage =
+    assistantMessage && normalizedAssistantMessage !== normalizedTranscript ? assistantMessage : '';
   const statusHint =
     rubyPhase === 'greeting_playing'
       ? 'Ruby is introducing herself'
       : rubyPhase === 'listening'
-        ? 'Listening'
+        ? 'Listening...'
         : rubyPhase === 'uploading'
-          ? 'Sending'
+          ? 'Sending...'
           : rubyPhase === 'thinking'
-            ? 'Thinking'
+            ? 'Thinking...'
             : rubyPhase === 'speaking'
-              ? 'Speaking'
+              ? 'Speaking...'
               : null;
 
-  // Phases where we should always surface a working indicator — even when a
-  // transcript is already on screen — so the user never thinks the request
-  // silently broke. `speaking` is included because before audio actually
-  // plays we briefly have neither a status nor a visible answer.
   const isWorkingPhase =
     !hasError &&
     (rubyPhase === 'uploading' ||
@@ -101,7 +101,7 @@ const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
       rubyPhase === 'speaking' ||
       rubyPhase === 'greeting_playing');
 
-  const isListeningBubble = rubyPhase === 'listening' && !hasError;
+  const showVoicePill = !hasError;
 
   return createPortal(
     <div
@@ -122,7 +122,7 @@ const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
       />
 
       <div
-        className={`voice-assistant-dock ${isListeningBubble ? 'voice-assistant-dock--bubble' : ''}`}
+        className={`voice-assistant-dock ${showVoicePill ? 'voice-assistant-dock--bubble' : ''}`}
         onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="voice-assistant-transcript" aria-live="polite">
@@ -131,16 +131,9 @@ const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
               {error || 'Something went wrong. Close and try again.'}
             </p>
           )}
-          {transcript && rubyPhase !== 'greeting_playing' ? (
-            <p className="voice-assistant-transcript-text">{transcript}</p>
-          ) : null}
 
-          {/* Always render a working indicator while Ruby is busy — even if a
-              transcript or assistant message is already on screen — so the
-              user can tell the request is still in flight. We hide it once
-              the assistant message is showing AND Ruby is no longer thinking,
-              so the answer doesn't compete with a "Speaking…" shimmer. */}
-          {isWorkingPhase && (rubyPhase === 'uploading' || rubyPhase === 'thinking' || !assistantMessage) ? (
+          {(!hasError && rubyPhase === 'listening') ||
+          (isWorkingPhase && (rubyPhase === 'uploading' || rubyPhase === 'thinking' || !visibleAssistantMessage)) ? (
             <p
               className="voice-assistant-hint voice-assistant-status"
               role="status"
@@ -155,7 +148,7 @@ const VoiceAssistantOverlay: React.FC<VoiceAssistantOverlayProps> = ({
             </p>
           ) : null}
 
-          {assistantMessage ? <p className="voice-assistant-response">{assistantMessage}</p> : null}
+          {visibleAssistantMessage ? <p className="voice-assistant-response">{visibleAssistantMessage}</p> : null}
         </div>
       </div>
     </div>,

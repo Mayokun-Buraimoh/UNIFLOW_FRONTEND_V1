@@ -103,6 +103,14 @@
 }
 
 /* Header Icons */
+.home-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .header-icons {
   display: flex;
   gap: 12px;

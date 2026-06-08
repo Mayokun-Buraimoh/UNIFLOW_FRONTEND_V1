@@ -192,6 +192,68 @@ ion-page {
   flex-shrink: 0;
 }
 
+.ruby-voice-setting {
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  cursor: default;
+}
+
+.settings-row-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.ruby-voice-setting h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ruby-voice-setting p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ruby-settings-toggle {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.14);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.ruby-settings-toggle--on {
+  background: linear-gradient(135deg, #00aa5b, #41d67e);
+  box-shadow: 0 0 18px rgba(0, 180, 95, 0.24);
+}
+
+.ruby-settings-toggle__thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.22);
+  transform: translateX(0);
+  transition: transform 0.25s ease;
+}
+
+.ruby-settings-toggle--on .ruby-settings-toggle__thumb {
+  transform: translateX(20px);
+}
+
 /* Logout Section */
 .logout-section {
   padding: 24px 20px;

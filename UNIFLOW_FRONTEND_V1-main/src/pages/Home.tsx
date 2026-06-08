@@ -6,6 +6,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import GlassyTimePicker from '../components/GlassyTimePicker';
 import { useTaskContext } from '../contexts/TaskContext';
 import { useEventContext } from '../contexts/EventContext';
+import { useRubyVoice } from '../contexts/RubyVoiceContext';
 import { useStreak, readLongestStreak } from '../hooks/useStreak';
 import { useProductivityScore } from '../hooks/useProductivityScore';
 import { useProfile } from '../hooks/useProfile';
@@ -30,6 +31,7 @@ const Home: React.FC = () => {
   const streak = useStreak({ trackActivity: false });
   const productivityScore = useProductivityScore();
   const { profile } = useProfile();
+  const { rubyWakeEnabled, toggleRubyListening } = useRubyVoice();
   const showStreak = profile?.preferences?.streakCount ?? true;
   const { t } = useTranslation();
 
@@ -738,27 +740,43 @@ const Home: React.FC = () => {
               <span className="last-refresh">Last updated: {getLastRefreshString()}</span>
             </div>
           </div>
-          <div className="header-icons">
-            <button
-              className={`refresh-btn ${isLoading ? 'loading' : ''}`}
-              onClick={handleRefresh}
-              title="Refresh dashboard"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
-              </svg>
-            </button>
-            {showStreak && (
+          <div className="home-header-actions">
+            <div className="header-icons">
               <button
-                type="button"
-                className="streak-icon"
-                onClick={() => setShowStreakSummary(true)}
-                aria-label="View streak summary"
+                className={`refresh-btn ${isLoading ? 'loading' : ''}`}
+                onClick={handleRefresh}
+                title="Refresh dashboard"
               >
-                <img src="/assets/icons/fire_streak.png" alt="" className="flame-icon" />
-                <span>{streak}</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
+                </svg>
               </button>
-            )}
+              {showStreak && (
+                <button
+                  type="button"
+                  className="streak-icon"
+                  onClick={() => setShowStreakSummary(true)}
+                  aria-label="View streak summary"
+                >
+                  <img src="/assets/icons/fire_streak.png" alt="" className="flame-icon" />
+                  <span>{streak}</span>
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className={`ruby-listening-toggle ${rubyWakeEnabled ? 'ruby-listening-toggle--on' : 'ruby-listening-toggle--off'}`}
+              onClick={toggleRubyListening}
+              aria-pressed={rubyWakeEnabled}
+              aria-label={rubyWakeEnabled ? 'Turn Ruby listening off' : 'Turn Ruby listening on'}
+            >
+              <span className="ruby-listening-toggle__text">
+                {rubyWakeEnabled ? 'Ruby On' : 'Ruby Off'}
+              </span>
+              <span className="ruby-listening-toggle__track">
+                <span className="ruby-listening-toggle__thumb" />
+              </span>
+            </button>
           </div>
         </div>
 
