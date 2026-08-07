@@ -112,6 +112,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ voiceOnboardingActi
           className="navbar-cutout"
         />
         <div
+          id="tour-ruby-assistant"
           ref={centralChatRef}
           className={[
             'nav-item central',

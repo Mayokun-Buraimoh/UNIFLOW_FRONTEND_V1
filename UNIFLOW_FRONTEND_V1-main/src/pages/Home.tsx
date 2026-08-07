@@ -13,6 +13,7 @@ import { useProfile } from '../hooks/useProfile';
 import { useTranslation } from 'react-i18next';
 import { getCurrentWeekFocusSessions } from '../utils/focusSessionAnalytics';
 import { NotificationService } from '../services/NotificationService';
+
 import './Home.css';
 
 type HomeLocationState = {
@@ -20,11 +21,7 @@ type HomeLocationState = {
   openCalendarForEventId?: string;
 };
 
-type HomeOnboardingStep = 'schedule' | 'voice' | null;
-
 const Home: React.FC = () => {
-  const SCHEDULE_ONBOARDING_KEY = 'uniflow_has_seen_schedule_onboarding';
-  const VOICE_ONBOARDING_KEY = 'uniflow_has_seen_voice_onboarding';
   const history = useHistory();
   const location = useLocation<HomeLocationState>();
   const { user, logoutWithConfirmation, refreshUser } = useAuth();
@@ -90,10 +87,8 @@ const Home: React.FC = () => {
     deleteEvent: deleteBackendEvent,
   } = useEventContext();
 
-  // UI Enhancement states
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState<HomeOnboardingStep>(null);
 
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [todayClassesCount, setTodayClassesCount] = useState<number>(0);
@@ -461,18 +456,6 @@ const Home: React.FC = () => {
 
     computeTodayClassesCount();
 
-    const hasSeenScheduleOnboarding = localStorage.getItem(SCHEDULE_ONBOARDING_KEY);
-    const hasSeenVoiceOnboarding = localStorage.getItem(VOICE_ONBOARDING_KEY);
-    if (!hasSeenScheduleOnboarding) {
-      setTimeout(() => setOnboardingStep('schedule'), 1000);
-      // Clear legacy local storage schedule to start completely fresh
-      localStorage.removeItem('weeklySchedule');
-      localStorage.removeItem('weeklyScheduleVenues');
-      computeTodayClassesCount();
-    } else if (!hasSeenVoiceOnboarding) {
-      setTimeout(() => setOnboardingStep('voice'), 800);
-    }
-
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'weeklySchedule') {
         computeTodayClassesCount();
@@ -494,19 +477,6 @@ const Home: React.FC = () => {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
-
-  const isScheduleOnboarding = onboardingStep === 'schedule';
-  const isVoiceOnboarding = onboardingStep === 'voice';
-
-  const advanceFromScheduleOnboarding = () => {
-    localStorage.setItem(SCHEDULE_ONBOARDING_KEY, 'true');
-    setOnboardingStep('voice');
-  };
-
-  const dismissVoiceOnboarding = () => {
-    localStorage.setItem(VOICE_ONBOARDING_KEY, 'true');
-    setOnboardingStep(null);
-  };
 
   const handleSaveEvent = () => {
     if (!selectedDate || !eventTitle || !eventTime) return;
@@ -731,7 +701,7 @@ const Home: React.FC = () => {
         <div className="status-bar-spacer"></div>
 
         {/* Header Section */}
-        <div className="dashboard-header">
+        <div className="dashboard-header" id="tour-welcome">
           <div className="greeting">
             <h1>{getGreeting()},</h1>
             <h2>{user?.name || 'User'}</h2>
@@ -823,11 +793,8 @@ const Home: React.FC = () => {
         )}
 
         {/* Metrics Grid */}
-        <div className={`metrics-grid ${isScheduleOnboarding ? 'onboarding-active' : ''}`}>
-          <div className={`metric-card ${isScheduleOnboarding ? 'onboarding-highlight' : ''}`} onClick={() => {
-            if (isScheduleOnboarding) {
-              advanceFromScheduleOnboarding();
-            }
+        <div className="metrics-grid">
+          <div className="metric-card" id="tour-schedule-card" onClick={() => {
             console.log('Today\'s Classes card clicked!');
             console.log('About to call handleWeeklyScheduleClick');
             try {
@@ -1073,7 +1040,7 @@ const Home: React.FC = () => {
         <div className="scroll-spacer"></div>
 
         {/* Bottom Navigation */}
-        <BottomNavigation voiceOnboardingActive={isVoiceOnboarding} />
+        <BottomNavigation />
 
 
 
@@ -1344,44 +1311,6 @@ const Home: React.FC = () => {
             </div>
           </div>
         )}
-        {isScheduleOnboarding && (
-          <div className="home-onboarding-overlay" onClick={() => {
-            advanceFromScheduleOnboarding();
-          }}>
-            <svg className="home-onboarding-arrow" width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="white" strokeWidth="4">
-              <path d="M20,80 Q50,40 20,20" strokeLinecap="round" fill="none" />
-              <path d="M10,40 L20,20 L40,30" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <div className="home-onboarding-text">
-              <h3>Set up your schedule!</h3>
-              <p>Click here to fill out your weekly classes. We'll automatically create course folders for you!</p>
-              <span className="onboarding-dismiss">Tap anywhere to dismiss</span>
-            </div>
-          </div>
-        )}
-
-        {isVoiceOnboarding && (
-          <div className="home-onboarding-overlay home-onboarding-overlay--voice" onClick={dismissVoiceOnboarding}>
-            <svg
-              className="home-onboarding-arrow home-onboarding-arrow--voice"
-              width="90"
-              height="90"
-              viewBox="0 0 100 100"
-              fill="none"
-              stroke="white"
-              strokeWidth="4"
-            >
-              <path d="M78,18 Q52,48 50,86" strokeLinecap="round" fill="none" />
-              <path d="M40,68 L50,86 L64,70" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-            <div className="home-onboarding-text home-onboarding-text--voice">
-              <h3>Talk to your AI assistant</h3>
-              <p>Long press the center AI icon to speak. Tell it your tasks and events, and it sets them up effortlessly.</p>
-              <span className="onboarding-dismiss">Tap anywhere to continue</span>
-            </div>
-          </div>
-        )}
-
         <IonToast
           isOpen={validationToastOpen}
           onDidDismiss={() => setValidationToastOpen(false)}
@@ -1390,6 +1319,7 @@ const Home: React.FC = () => {
           position="top"
           color="warning"
         />
+
 
       </IonContent>
     </IonPage>

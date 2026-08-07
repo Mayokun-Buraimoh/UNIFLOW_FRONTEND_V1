@@ -45,6 +45,7 @@ import { initializeLocalFirstSync, syncNow } from './localfirst/syncQueue';
 import { requestTodaysClassNotificationsSync } from './services/scheduleClassNotifications';
 import { applyStatusBarStyle, type AppStatusBarStyle } from './utils/statusBar';
 import { navigateBackSafely } from './utils/navigation';
+import { ProductTour } from './components/ProductTour';
 const RootRoute = () => {
   const { loading } = useAuth();
 
@@ -110,10 +111,11 @@ const GlobalLeftSwipeBack = () => {
       const dx = endX - startX;
       const dy = endY - startY;
 
-      // App rule: only left swipe (right-to-left) should trigger back.
-      if (dx >= 0) return;
+      // App rule: only right swipe (left-to-right) should trigger back.
+      if (dx <= 0) return; // Ignore right-to-left swipes
+      if (startX > 40) return; // Must start from the left edge of the screen (like native iOS)
       if (Math.abs(dx) < BACK_SWIPE_MIN_DX) return;
-      if (Math.abs(dx) <= Math.abs(dy) * 1.15) return;
+      if (Math.abs(dx) <= Math.abs(dy) * 2.0) return; // Stricter angle to prevent accidental triggers while scrolling
 
       navigateBackSafely(history, location.pathname, '/home');
     };
@@ -296,6 +298,7 @@ const App: React.FC = () => {
                   <RootRoute />
                 </Route>
                 </IonRouterOutlet>
+                <ProductTour />
                 </EventProviderGate>
                 </TaskProviderGate>
               </PlanProvider>

@@ -8,7 +8,7 @@ import { getDefaultStartPath } from '../utils/appPreferences';
 
 const Login: React.FC = () => {
   const history = useHistory();
-  const { login, error, clearError, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, error, clearError, isAuthenticated, loading: authLoading, adminBypass } = useAuth();
 
   // If the user is already signed in (e.g. landed here via browser back / swipe-back
   // after the auth route was left in the history stack), bounce them to home so the
@@ -154,6 +154,7 @@ const Login: React.FC = () => {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </IonButton>
+
 
           </div>
 

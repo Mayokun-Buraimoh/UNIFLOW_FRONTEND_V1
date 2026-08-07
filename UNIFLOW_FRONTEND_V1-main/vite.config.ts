@@ -37,7 +37,7 @@ export default defineConfig({
       injectRegister: 'auto',
       workbox: {
         // Legacy bundle can exceed Workbox default 2 MiB precache limit.
-        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Do not precache large/binary wake-word assets (served from public/ on demand).
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,webmanifest}'],
         globIgnores: [

@@ -91,7 +91,7 @@ const Plans: React.FC = () => {
                         >
                             {isSearching ? <span style={{fontSize: '24px', lineHeight: 1, padding: '0 4px'}}>×</span> : <IonIcon icon={searchOutline} />}
                         </button>
-                        <div className="plans-add-btn-container">
+                        <div className="plans-add-btn-container" id="tour-add-plan">
                             <button
                                 className="plans-add-circle-btn"
                                 onClick={() => setShowNameAlert(true)}

@@ -222,18 +222,21 @@ const PlanDetails: React.FC = () => {
                 {/* Pill Tabs */}
                 <div className="pd-tabs">
                     <button
+                        id="tour-plan-goals"
                         className={`pd-tab ${activeTab === 'goals' ? 'active' : ''}`}
                         onClick={() => { setActiveTab('goals'); setShowAddInput(false); }}
                     >
                         Goals
                     </button>
                     <button
+                        id="tour-plan-tasks"
                         className={`pd-tab ${activeTab === 'tasks' ? 'active' : ''}`}
                         onClick={() => { setActiveTab('tasks'); setShowAddInput(false); }}
                     >
                         Tasks
                     </button>
                     <button
+                        id="tour-plan-progress"
                         className={`pd-tab ${activeTab === 'progress' ? 'active' : ''}`}
                         onClick={() => { setActiveTab('progress'); setShowAddInput(false); }}
                     >

@@ -1,0 +1,165 @@
+.flo-tooltip-wrapper {
+  /* wrapper is used to ensure Joyride positions the entire unit properly, but we apply it via the tooltip */
+}
+
+.flo-tooltip {
+  position: relative;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  padding: 20px;
+  max-width: 350px;
+  font-family: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  /* Make room for the avatar on the left by overflowing without clipping */
+  overflow: visible;
+  /* Optionally shift margin if Joyride gets confused, but usually it calculates bounding box based on contents if they affect layout */
+}
+
+/* The glassmorphism chat bubble tail */
+.flo-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 40px; /* Align with robot's mouth */
+  left: -8px;
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  transform: rotate(45deg);
+  border-bottom-left-radius: 4px;
+  z-index: -1;
+}
+
+.flo-tooltip-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 12px;
+}
+
+.flo-avatar {
+  position: absolute;
+  top: -10px;
+  left: -120px; /* Position to the left of the chat box */
+  width: 110px; /* Make it slightly bigger so it looks like a companion */
+  height: 110px;
+  object-fit: contain;
+  z-index: 10;
+  animation: floatAndWobble 6s ease-in-out infinite;
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.2));
+}
+
+/* 
+  Float up and down continuously, 
+  and occasionally do a 3D tilt/wobble 
+*/
+@keyframes floatAndWobble {
+  0% { transform: translateY(0) rotate3d(0, 0, 0, 0); }
+  25% { transform: translateY(-10px) rotate3d(1, 1, 0, 15deg) scale(1.05); }
+  50% { transform: translateY(0) rotate3d(0, 0, 0, 0); }
+  75% { transform: translateY(-10px) rotate3d(-1, 1, 0, 15deg) scale(1.05); }
+  100% { transform: translateY(0) rotate3d(0, 0, 0, 0); }
+}
+
+.flo-tooltip-content {
+  flex: 1;
+}
+
+.flo-tooltip-title {
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.flo-tooltip-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #374151;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.flo-tooltip-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  padding-top: 12px;
+}
+
+.flo-tooltip-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.flo-btn-skip {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.flo-btn-skip:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #374151;
+}
+
+.flo-btn-back {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.flo-btn-back:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.flo-btn-next {
+  background: #10b981;
+  border: none;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
+.flo-btn-next:hover {
+  background: #059669;
+}
+
+/* Force hide all react-joyride beacons to prevent flickering before auto-click */
+button[title="Open the dialog"],
+button[aria-label="Open the dialog"],
+[data-test-id="button-beacon"],
+.__flo-tour-beacon,
+.react-joyride__beacon {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

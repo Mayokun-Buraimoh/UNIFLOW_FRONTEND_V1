@@ -393,7 +393,7 @@ const Courses: React.FC = () => {
                   </svg>
                 )}
               </button>
-              <div className="add-btn-container">
+              <div className="add-btn-container" id="tour-add-course">
                 <button className="icon-btn add-btn-new" onClick={handleTogglePopover}>
                   <div className="add-circle">
                     <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
